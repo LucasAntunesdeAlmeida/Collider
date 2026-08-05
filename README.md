@@ -216,11 +216,14 @@ does not exist. That is the point.
 | `engine.Sprite(path)` | Object from an image (collider = image bounds) |
 | `engine.Rect(w, h, color)` | Colored rectangle object |
 | `engine.Text(str)` | Text object (clickable, but never collides) |
+| `engine.UseAssets(fs)` | Load all assets from an embedded filesystem (go:embed) |
 | `.At(x, y)` | Position (center); `.AtEdge()` picks a random screen edge |
 | `.Tag(name)` | Label for tag-based collision rules |
 | `.Solid()` | Engine resolves overlaps (walls, floors, paddles) |
 | `.WithGravity()` | Affected by the scene's gravity |
 | `.Size(w, h)` | Override collider size |
+| `.Animation(name, strip, frames, fps)` | Define a sprite-sheet animation |
+| `.Font(path)` / `.TextSize(px)` / `.TextColor(c)` | Text styling (custom TTF, size, color) |
 
 ### Object: runtime
 
@@ -232,6 +235,7 @@ does not exist. That is the point.
 | `o.MoveToward(x, y, dist)` / `o.VelocityToward(x, y, speed)` | Homing helpers |
 | `o.Grounded() bool` | Resting on a solid (platformers) |
 | `o.SetText(s)` / `o.SetSprite(path)` | Change content at runtime |
+| `o.Play(name)` / `o.PlayOnce(name)` | Switch animations (loop / hold last frame) |
 | `o.LifeTime(sec)` | Auto-destroy after n seconds |
 | `o.Destroy()` | Remove from scene (safe inside callbacks; applied at end of frame) |
 | `o.OnUpdate(fn(dt))` | Per-frame logic |
