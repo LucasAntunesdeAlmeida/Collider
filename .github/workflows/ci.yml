@@ -15,13 +15,15 @@ jobs:
         with:
           go-version: stable
 
-      # Ebitengine needs these to compile on Linux.
+      # Ebitengine needs the dev libraries to compile on Linux, and xvfb
+      # to provide a virtual display for the tests (GLFW refuses to
+      # initialize without one, even headless).
       - name: Install Ebitengine build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libc6-dev libgl1-mesa-dev libglu1-mesa-dev \
             libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev \
-            libxxf86vm-dev libasound2-dev pkg-config
+            libxxf86vm-dev libasound2-dev pkg-config xvfb
 
       - name: Check formatting
         run: test -z "$(gofmt -l .)"
@@ -30,4 +32,4 @@ jobs:
         run: go vet ./...
 
       - name: Test
-        run: go test ./...
+        run: xvfb-run --auto-servernum go test ./...
