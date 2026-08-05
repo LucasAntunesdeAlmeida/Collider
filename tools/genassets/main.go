@@ -111,7 +111,6 @@ func catcher() {
 	strip(d+"sprites/gem.png", 3, gemSparkle)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x1B1030), rgb(0x33204F))
 	writeWav(d+"audios/catch.wav", seq(tone(880, 0.04, 0.35), tone(1175, 0.06, 0.35)))
-	writeWav(d+"audios/miss.wav", tone(196, 0.1, 0.3))
 	writeWav(d+"audios/end.wav", melody(0.13, 0.3, 784, 659, 523))
 	writeWav(d+"audios/theme.wav", melody(0.24, 0.16, 330, 392, 494, 392))
 }
@@ -153,7 +152,6 @@ func zombieNight() {
 	art(d+"sprites/hero-idle.png", 3, heroWalk[0])
 	strip(d+"sprites/zombie.png", 3, zombieWalk)
 	art(d+"sprites/bullet.png", 3, bulletArt)
-	tile(d+"sprites/ground.png", 40, 40, rgb(0x1B2418), rgb(0x2A3524), rgb(0x121A10), 10)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x0C1208), rgb(0x1B2418))
 	writeWav(d+"audios/shot.wav", noise(0.09, 0.4))
 	writeWav(d+"audios/kill.wav", seq(noise(0.06, 0.3), tone(147, 0.1, 0.3)))
@@ -175,7 +173,6 @@ func arena() {
 		"  RRRR  ",
 		"   RR   ",
 	})
-	tile(d+"sprites/floor.png", 40, 40, rgb(0x33204F), rgb(0x4A3070), rgb(0x231438), 6)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x1B1030), rgb(0x33204F))
 	writeWav(d+"audios/hurt.wav", seq(tone(196, 0.1, 0.45), noise(0.08, 0.3)))
 	writeWav(d+"audios/death.wav", melody(0.16, 0.35, 392, 330, 262, 196))
@@ -187,7 +184,6 @@ func gemRush() {
 	strip(d+"sprites/player.png", 3, heroWalk)
 	art(d+"sprites/idle.png", 3, heroWalk[0])
 	strip(d+"sprites/gem.png", 3, gemSparkle)
-	tile(d+"sprites/floor.png", 40, 40, rgb(0x1E2A4A), rgb(0x2C3C66), rgb(0x141C33), 5)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x101830), rgb(0x1E2A4A))
 	writeWav(d+"audios/gem.wav", seq(tone(1047, 0.04, 0.35), tone(1568, 0.07, 0.35)))
 	writeWav(d+"audios/win.wav", melody(0.12, 0.35, 523, 659, 784, 1047))
@@ -212,7 +208,6 @@ func dungeon() {
 	art(d+"sprites/door.png", 3, doorArt)
 	art(d+"sprites/chest.png", 3, chestArt)
 	tile(d+"sprites/wall.png", 40, 40, rgb(0x5A5348), rgb(0x7D7466), rgb(0x3A352E), 5)
-	tile(d+"sprites/floor.png", 40, 40, rgb(0x2A2620), rgb(0x3A342C), rgb(0x1C1915), 4)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x14110D), rgb(0x241F18))
 	writeWav(d+"audios/key.wav", seq(tone(784, 0.05, 0.35), tone(1047, 0.08, 0.35)))
 	writeWav(d+"audios/door.wav", seq(tone(196, 0.12, 0.4), noise(0.08, 0.2)))

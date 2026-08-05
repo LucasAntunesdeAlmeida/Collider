@@ -45,20 +45,19 @@ func main() {
 	// --- Menu ---
 	menu := g.Scene("menu")
 	menu.Music("audios/theme.wav")
-	menu.Add(engine.Sprite("sprites/background.png").At(400, 300))
+	menu.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 	menu.Add(engine.Text("SHIP").At(400, 160).Font(font).TextSize(64).TextColor(engine.Yellow))
 	menu.Add(engine.Text("DODGE THE COMETS").At(400, 240).Font(font).TextSize(16))
-	playBtn := menu.Add(engine.Sprite("sprites/button.png").At(400, 350))
-	menu.Add(engine.Text("PLAY").At(400, 350).Font(font).TextSize(20).TextColor(engine.Yellow))
 	menu.Add(engine.Text("A/D MOVE   F FULLSCREEN").At(400, 520).Font(font).TextSize(12))
-	playBtn.OnClick(func() { g.Go("play") })
+	menu.Add(engine.Button("PLAY").At(400, 350).Font(font).TextSize(20).Color(engine.Green)).
+		OnClick(func() { g.Go("play") })
 	menu.OnUpdate(fullscreenKey)
 
 	// --- Gameplay ---
 	play := g.Scene("play")
 	play.Music("audios/theme.wav")
 	play.OnUpdate(fullscreenKey)
-	play.Add(engine.Sprite("sprites/background.png").At(400, 300))
+	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 
 	ship := play.Add(engine.Rect(48, 48, engine.Blue).At(400, 520).
 		Animation("fly", "sprites/ship.png", 2, 8).
@@ -105,15 +104,12 @@ func main() {
 	over := g.Scene("gameover")
 	over.Music("audios/theme.wav")
 	over.OnUpdate(fullscreenKey)
-	over.Add(engine.Sprite("sprites/background.png").At(400, 300))
-	over.Add(engine.Sprite("sprites/panel.png").At(400, 290))
+	over.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	over.Add(engine.Rect(528, 268, engine.White).At(400, 290).Visual())
+	over.Add(engine.Rect(520, 260, engine.Black).At(400, 290).Visual())
 	over.Add(engine.Text("CRASHED").At(400, 240).Font(font).TextSize(28).TextColor(engine.Orange))
 	result := over.Add(engine.Text("").At(400, 295).Font(font).TextSize(14))
 	bestText := over.Add(engine.Text("").At(400, 330).Font(font).TextSize(14).TextColor(engine.Yellow))
-	againBtn := over.Add(engine.Sprite("sprites/button.png").At(290, 430))
-	over.Add(engine.Text("AGAIN").At(290, 430).Font(font).TextSize(16).TextColor(engine.Yellow))
-	menuBtn := over.Add(engine.Sprite("sprites/button.png").At(510, 430))
-	over.Add(engine.Text("MENU").At(510, 430).Font(font).TextSize(16).TextColor(engine.Yellow))
 
 	reset := func(target string) {
 		alive = true
@@ -124,8 +120,10 @@ func main() {
 			g.Go(target)
 		}
 	}
-	againBtn.OnClick(func() { reset("play") })
-	menuBtn.OnClick(func() { reset("menu") })
+	over.Add(engine.Button("AGAIN").At(290, 460).Font(font).TextSize(16).Color(engine.Green)).
+		OnClick(func() { reset("play") })
+	over.Add(engine.Button("MENU").At(510, 460).Font(font).TextSize(16)).
+		OnClick(func() { reset("menu") })
 
 	ship.OnCollisionWith("comet", func(_ *engine.Object) {
 		if !alive {
