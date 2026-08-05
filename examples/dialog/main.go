@@ -1,9 +1,6 @@
-// Dialog: a visual-novel style conversation. Click to advance; clicking
-// mid-line reveals the rest of it instantly (the typewriter effect is a
-// few lines of OnUpdate).
-//
-// This example proves the text system: a custom bold font loaded from a
-// TTF file for speaker names, text sizes for hierarchy, and text colors.
+// Dialog: a visual-novel style conversation with drawn portraits, a
+// framed dialog box, a typewriter effect with letter blips, and a menu.
+// Click to advance; clicking mid-line reveals the rest instantly.
 //
 // Run from this folder: cd examples/dialog && go run .
 package main
@@ -13,6 +10,8 @@ import (
 
 	engine "github.com/LucasAntunesdeAlmeida/collider"
 )
+
+const font = "fonts/pixel.ttf"
 
 type line struct {
 	who  string
@@ -29,22 +28,40 @@ var script = []line{
 
 func main() {
 	g := engine.New("Dialog", 800, 600)
+
+	// --- Menu ---
+	menu := g.Scene("menu")
+	menu.Music("audios/theme.wav")
+	menu.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	menu.Add(engine.Text("THE CAVE HUMS").At(400, 150).Font(font).TextSize(32).TextColor(engine.Yellow))
+	menu.Add(engine.Text("A CONVERSATION").At(400, 220).Font(font).TextSize(14))
+	menu.Add(engine.Text("CLICK TO ADVANCE").At(400, 500).Font(font).TextSize(12))
+	menu.Add(engine.Button("LISTEN").At(400, 360).Font(font).TextSize(22).Color(engine.Green)).
+		OnClick(func() { g.Restart("play") })
+
+	// --- Conversation ---
 	play := g.Scene("play")
 	play.Music("audios/theme.wav")
+	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 
-	play.Add(engine.Rect(780, 180, engine.Black).At(400, 490))
-	portrait := play.Add(engine.Sprite("sprites/elder.png").At(100, 470))
-	name := play.Add(engine.Text("").At(260, 430).
-		Font("fonts/gobold.ttf").TextSize(30).TextColor(engine.Yellow))
-	speech := play.Add(engine.Text("").At(440, 500).TextSize(20))
+	// The dialog frame: dark panel with a thin light border.
+	play.Add(engine.Rect(784, 184, engine.White).At(400, 488).Visual())
+	play.Add(engine.Rect(776, 176, engine.Black).At(400, 488).Visual())
+
+	portrait := play.Add(engine.Sprite("sprites/elder.png").At(105, 470).Visual())
+	name := play.Add(engine.Text("").At(300, 425).Font(font).TextSize(22).TextColor(engine.Yellow))
+	speech := play.Add(engine.Text("").At(440, 495).Font(font).TextSize(13))
+	play.Add(engine.Text("CLICK").At(740, 560).Font(font).TextSize(9).Visual())
 
 	idx := 0
 	shown := 0.0
+	blipAt := 0
 	show := func() {
 		l := script[idx]
-		name.SetText(l.who)
+		name.SetText(strings.ToUpper(l.who))
 		portrait.SetSprite("sprites/" + strings.ToLower(l.who) + ".png")
 		shown = 0
+		blipAt = 0
 	}
 	show()
 
@@ -53,9 +70,15 @@ func main() {
 			return // conversation over, waiting for the scene switch
 		}
 		l := script[idx]
-		shown += 40 * dt
+		shown += 30 * dt
 		n := min(len(l.text), int(shown))
 		speech.SetText(l.text[:n])
+		if n > blipAt {
+			blipAt = n + 3
+			if n < len(l.text) {
+				g.Sound("audios/blip.wav")
+			}
+		}
 	})
 
 	play.OnClick(func(_, _ float64) {
@@ -72,15 +95,18 @@ func main() {
 		show()
 	})
 
+	// --- End ---
 	end := g.Scene("end")
-	end.Add(engine.Text("The conversation ends.").At(400, 270).
-		Font("fonts/gobold.ttf").TextSize(32))
-	end.Add(engine.Text("Click to hear it again.").At(400, 330).TextColor(engine.Yellow))
-	end.OnClick(func(_, _ float64) {
-		idx = 0
-		show()
-		g.Restart("play")
-	})
+	end.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	end.Add(engine.Text("THE CONVERSATION ENDS").At(400, 220).Font(font).TextSize(22).TextColor(engine.Yellow))
+	end.Add(engine.Button("HEAR IT AGAIN").At(290, 400).Font(font).TextSize(16).Color(engine.Green)).
+		OnClick(func() {
+			idx = 0
+			show()
+			g.Restart("play")
+		})
+	end.Add(engine.Button("MENU").At(540, 400).Font(font).TextSize(16)).
+		OnClick(func() { g.Go("menu") })
 
-	g.Run("play")
+	g.Run("menu")
 }
