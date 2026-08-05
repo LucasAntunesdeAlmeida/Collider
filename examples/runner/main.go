@@ -1,10 +1,6 @@
-// Runner: an endless runner. The player runs automatically (the world
-// moves, the player stays), Space is the only input. Survive the crates.
-//
-// This example proves sprite sheet animation: the player has run, jump
-// and death strips, switched with Play and PlayOnce. Auto-scrolling
-// needs no camera: obstacles simply move left with a velocity while the
-// player's x stays fixed, the classic moving-world approach.
+// Runner: an endless runner with a drawn sprinter. The world moves,
+// the player stays; Space is the only input. Menu, run/jump/death
+// animations, tiled ground, sunset hills.
 //
 // Run from this folder: cd examples/runner && go run .
 package main
@@ -16,42 +12,71 @@ import (
 	engine "github.com/LucasAntunesdeAlmeida/collider"
 )
 
+const font = "fonts/pixel.ttf"
+
 func main() {
 	g := engine.New("Runner", 800, 600)
+
+	// --- Menu ---
+	menu := g.Scene("menu")
+	menu.Music("audios/menu.wav")
+	menu.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	menu.Add(engine.Text("RUNNER").At(400, 150).Font(font).TextSize(52).TextColor(engine.Yellow))
+	menu.Add(engine.Text("JUMP THE CRATES").At(400, 225).Font(font).TextSize(14))
+	menu.Add(engine.Text("SPACE TO JUMP").At(400, 500).Font(font).TextSize(12))
+	menu.Add(engine.Button("RUN").At(400, 360).Font(font).TextSize(24).Color(engine.Green)).
+		OnClick(func() { g.Restart("play") })
+
+	// --- Run ---
 	play := g.Scene("play")
 	play.Music("audios/run.wav")
 	play.Gravity(2000)
+	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 
-	play.Add(engine.Rect(800, 60, engine.Green).At(400, 570).Solid())
+	play.Add(engine.Rect(800, 60, nil).At(400, 570).Solid())
+	for i := range 20 {
+		play.Add(engine.Sprite("sprites/ground.png").At(float64(i)*40+20, 570).Visual())
+	}
 
-	player := play.Add(engine.Rect(32, 48, engine.Blue).At(150, 480).WithGravity().
-		Animation("run", "sprites/run.png", 4, 10).
+	player := play.Add(engine.Rect(36, 40, nil).At(150, 500).WithGravity().
+		Animation("run", "sprites/run.png", 4, 12).
 		Animation("jump", "sprites/jump.png", 2, 6).
 		Animation("death", "sprites/death.png", 4, 8))
 	player.Play("run")
 
-	hud := play.Add(engine.Text("0 m").At(60, 30))
+	hud := play.Add(engine.Text("0 M").At(70, 26).Font(font).TextSize(16))
 	alive := true
-	score := 0.0
+	dist := 0.0
 
-	over := g.Scene("gameover")
-	msg := over.Add(engine.Text("").At(400, 280))
-	over.Add(engine.Text("Click to run again").At(400, 340))
-	over.OnClick(func(_, _ float64) {
-		alive = true
-		score = 0
-		player.Play("run")
-		g.Restart("play")
-	})
+	// --- Game over ---
+	over := g.Scene("over")
+	over.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	over.Add(engine.Text("TRIPPED!").At(400, 200).Font(font).TextSize(40).TextColor(engine.Orange))
+	result := over.Add(engine.Text("").At(400, 280).Font(font).TextSize(18))
+	over.Add(engine.Button("AGAIN").At(290, 420).Font(font).TextSize(18).Color(engine.Green)).
+		OnClick(func() {
+			alive = true
+			dist = 0
+			player.Play("run")
+			g.Restart("play")
+		})
+	over.Add(engine.Button("MENU").At(540, 420).Font(font).TextSize(18)).
+		OnClick(func() {
+			alive = true
+			dist = 0
+			player.Play("run")
+			g.Restart("play")
+			g.Go("menu")
+		})
 
 	player.OnUpdate(func(dt float64) {
 		if !alive {
 			return
 		}
-		score += 60 * dt
-		hud.SetText(fmt.Sprintf("%d m", int(score)))
+		dist += 60 * dt
+		hud.SetText(fmt.Sprintf("%d M", int(dist)))
 		if g.Key(engine.Space) && player.Grounded() {
-			player.Vy = -820
+			player.Vy = -840
 			g.Sound("audios/jump.wav")
 		}
 		if player.Grounded() {
@@ -65,10 +90,10 @@ func main() {
 		if !alive {
 			return
 		}
-		size := 26 + rand.Float64()*22
+		size := 30 + rand.Float64()*24
 		crate := play.Add(engine.Sprite("sprites/crate.png").Size(size, size).
-			At(830, 540-size/2).Tag("crate"))
-		crate.Vx = -300
+			At(830, 550-size/2).Tag("crate"))
+		crate.Vx = -(300 + dist/3) // the world speeds up as you go
 		crate.LifeTime(4)
 	})
 
@@ -79,9 +104,9 @@ func main() {
 		alive = false
 		player.PlayOnce("death")
 		g.Sound("audios/hit.wav")
-		msg.SetText(fmt.Sprintf("You ran %d m", int(score)))
-		play.After(1, func() { g.Go("gameover") })
+		result.SetText(fmt.Sprintf("YOU RAN %d M", int(dist)))
+		play.After(0.9, func() { g.Go("over") })
 	})
 
-	g.Run("play")
+	g.Run("menu")
 }

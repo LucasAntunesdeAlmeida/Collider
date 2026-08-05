@@ -119,9 +119,11 @@ func catcher() {
 func jumper() {
 	d := "examples/jumper/"
 	strip(d+"sprites/player.png", 3, heroWalk)
+	art(d+"sprites/idle.png", 3, heroWalk[0])
 	strip(d+"sprites/coin.png", 3, coinSpin)
 	art(d+"sprites/spikes.png", 3, spikeArt)
-	tile(d+"sprites/platform.png", 40, rgb(0x3EB658), rgb(0x7FE39A), rgb(0x2C7A46), 6)
+	tile(d+"sprites/platform.png", 40, 20, rgb(0x3EB658), rgb(0x7FE39A), rgb(0x2C7A46), 4)
+	tile(d+"sprites/ground.png", 40, 40, rgb(0x6B4423), rgb(0x8B5A2B), rgb(0x4A2F18), 6)
 	hills(d+"sprites/background.png", 800, 600, rgb(0x4FA3E0), rgb(0x2C7A46))
 	writeWav(d+"audios/jump.wav", seq(tone(392, 0.04, 0.35), tone(587, 0.06, 0.35)))
 	writeWav(d+"audios/coin.wav", seq(tone(880, 0.05, 0.4), tone(1320, 0.08, 0.4)))
@@ -137,7 +139,7 @@ func runner() {
 	strip(d+"sprites/jump.png", 3, runnerJump)
 	strip(d+"sprites/death.png", 3, runnerDeath)
 	art(d+"sprites/crate.png", 3, crateArt)
-	tile(d+"sprites/ground.png", 40, rgb(0x8B5A2B), rgb(0xB07C4A), rgb(0x6B4423), 8)
+	tile(d+"sprites/ground.png", 40, 40, rgb(0x8B5A2B), rgb(0xB07C4A), rgb(0x6B4423), 8)
 	hills(d+"sprites/background.png", 800, 600, rgb(0xE08A4F), rgb(0x6B4423))
 	writeWav(d+"audios/jump.wav", seq(tone(330, 0.05, 0.35), tone(494, 0.07, 0.35)))
 	writeWav(d+"audios/hit.wav", noise(0.16, 0.45))
@@ -150,7 +152,7 @@ func zombieNight() {
 	strip(d+"sprites/hero.png", 3, heroWalk)
 	strip(d+"sprites/zombie.png", 3, zombieWalk)
 	art(d+"sprites/bullet.png", 3, bulletArt)
-	tile(d+"sprites/ground.png", 40, rgb(0x1B2418), rgb(0x2A3524), rgb(0x121A10), 10)
+	tile(d+"sprites/ground.png", 40, 40, rgb(0x1B2418), rgb(0x2A3524), rgb(0x121A10), 10)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x0C1208), rgb(0x1B2418))
 	writeWav(d+"audios/shot.wav", noise(0.09, 0.4))
 	writeWav(d+"audios/kill.wav", seq(noise(0.06, 0.3), tone(147, 0.1, 0.3)))
@@ -171,7 +173,7 @@ func arena() {
 		"  RRRR  ",
 		"   RR   ",
 	})
-	tile(d+"sprites/floor.png", 40, rgb(0x33204F), rgb(0x4A3070), rgb(0x231438), 6)
+	tile(d+"sprites/floor.png", 40, 40, rgb(0x33204F), rgb(0x4A3070), rgb(0x231438), 6)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x1B1030), rgb(0x33204F))
 	writeWav(d+"audios/hurt.wav", seq(tone(196, 0.1, 0.45), noise(0.08, 0.3)))
 	writeWav(d+"audios/death.wav", melody(0.16, 0.35, 392, 330, 262, 196))
@@ -182,7 +184,7 @@ func gemRush() {
 	d := "examples/agent/"
 	strip(d+"sprites/player.png", 3, heroWalk)
 	strip(d+"sprites/gem.png", 3, gemSparkle)
-	tile(d+"sprites/floor.png", 40, rgb(0x1E2A4A), rgb(0x2C3C66), rgb(0x141C33), 5)
+	tile(d+"sprites/floor.png", 40, 40, rgb(0x1E2A4A), rgb(0x2C3C66), rgb(0x141C33), 5)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x101830), rgb(0x1E2A4A))
 	writeWav(d+"audios/gem.wav", seq(tone(1047, 0.04, 0.35), tone(1568, 0.07, 0.35)))
 	writeWav(d+"audios/win.wav", melody(0.12, 0.35, 523, 659, 784, 1047))
@@ -193,7 +195,7 @@ func caves() {
 	d := "examples/caves/"
 	strip(d+"sprites/player.png", 3, heroWalk)
 	strip(d+"sprites/gem.png", 2, gemSparkle)
-	tile(d+"sprites/rock.png", 20, rgb(0x4A4238), rgb(0x6B5F50), rgb(0x2E2822), 4)
+	tile(d+"sprites/rock.png", 20, 20, rgb(0x4A4238), rgb(0x6B5F50), rgb(0x2E2822), 4)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x120E0A), rgb(0x241C14))
 	writeWav(d+"audios/gem.wav", seq(tone(1047, 0.05, 0.35), tone(1568, 0.08, 0.35)))
 	writeWav(d+"audios/win.wav", melody(0.12, 0.35, 523, 659, 784, 1047))
@@ -206,8 +208,8 @@ func dungeon() {
 	art(d+"sprites/key.png", 3, keyArt)
 	art(d+"sprites/door.png", 3, doorArt)
 	art(d+"sprites/chest.png", 3, chestArt)
-	tile(d+"sprites/wall.png", 40, rgb(0x5A5348), rgb(0x7D7466), rgb(0x3A352E), 5)
-	tile(d+"sprites/floor.png", 40, rgb(0x2A2620), rgb(0x3A342C), rgb(0x1C1915), 4)
+	tile(d+"sprites/wall.png", 40, 40, rgb(0x5A5348), rgb(0x7D7466), rgb(0x3A352E), 5)
+	tile(d+"sprites/floor.png", 40, 40, rgb(0x2A2620), rgb(0x3A342C), rgb(0x1C1915), 4)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x14110D), rgb(0x241F18))
 	writeWav(d+"audios/key.wav", seq(tone(784, 0.05, 0.35), tone(1047, 0.08, 0.35)))
 	writeWav(d+"audios/door.wav", seq(tone(196, 0.12, 0.4), noise(0.08, 0.2)))

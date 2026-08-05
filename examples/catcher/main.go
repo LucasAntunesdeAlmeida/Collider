@@ -118,7 +118,8 @@ func main() {
 	})
 
 	play.Every(0.5, func() {
-		gem := play.Add(engine.Sprite("sprites/gem.png").
+		// Rect(nil) + Animation = an object drawn only by its frames.
+		gem := play.Add(engine.Rect(30, 24, nil).
 			At(30+rand.Float64()*740, -20).Tag("gem").
 			Animation("spin", "sprites/gem.png", 2, 6))
 		gem.Play("spin")

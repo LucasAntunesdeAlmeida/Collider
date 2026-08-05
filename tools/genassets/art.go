@@ -93,17 +93,17 @@ func starfield(path string, w, h int, count int, top, bottom color.RGBA) {
 	writePng(path, img)
 }
 
-// tile draws a repeating textured square: the wall and floor material
-// of the tile-based games. seedNoise scatters darker flecks.
-func tile(path string, size int, base, light, dark color.RGBA, flecks int) {
-	img := image.NewRGBA(image.Rect(0, 0, size, size))
-	fillBox(img, 0, 0, size, size, base)
-	fillBox(img, 0, 0, size, 2, light)
-	fillBox(img, 0, 0, 2, size, light)
-	fillBox(img, 0, size-2, size, 2, dark)
-	fillBox(img, size-2, 0, 2, size, dark)
+// tile draws a repeating textured block: the wall, floor and platform
+// material of the tile-based games. Flecks scatter darker specks.
+func tile(path string, w, h int, base, light, dark color.RGBA, flecks int) {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	fillBox(img, 0, 0, w, h, base)
+	fillBox(img, 0, 0, w, 2, light)
+	fillBox(img, 0, 0, 2, h, light)
+	fillBox(img, 0, h-2, w, 2, dark)
+	fillBox(img, w-2, 0, 2, h, dark)
 	for range flecks {
-		x, y := 3+rand.IntN(size-6), 3+rand.IntN(size-6)
+		x, y := 3+rand.IntN(max(w-6, 1)), 3+rand.IntN(max(h-6, 1))
 		fillBox(img, x, y, 2, 2, dark)
 	}
 	writePng(path, img)
