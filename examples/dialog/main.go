@@ -49,6 +49,9 @@ func main() {
 	show()
 
 	speech.OnUpdate(func(dt float64) {
+		if idx >= len(script) {
+			return // conversation over, waiting for the scene switch
+		}
 		l := script[idx]
 		shown += 40 * dt
 		n := min(len(l.text), int(shown))
