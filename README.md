@@ -187,32 +187,26 @@ does not exist. That is the point.
 
 ---
 
-## Design rules the engine must keep
+## Behavior you can rely on
 
-These came directly out of writing the example games:
-
-1. **Destroy is always safe.** `Destroy()` inside any callback queues the removal
-   and applies it at end of frame. No iterator invalidation, ever.
+1. **`Destroy()` is always safe**, including inside any callback: the object
+   is removed at the end of the frame, never mid-iteration.
 2. **Collision events fire on *enter*.** `OnCollision` fires once when contact
-   begins, not every frame of overlap. (`OnColliding`, firing every frame, can
-   come later if a real example demands it.)
-3. **Tags over instances.** Instance wiring does not survive spawning, so every
-   collision API accepts tags.
-4. **Solid vs trigger is the whole physics story.** No forces, no torque, no
-   restitution. If a game needs Angry Birds physics, this is not its engine.
-5. **Nothing requires configuration that has a reasonable default.**
-6. **Text never collides.** A score label overlapping the ball must not
+   begins, not on every frame of overlap. Continuous contact (standing on the
+   floor) is one event.
+3. **Solid vs trigger is the whole physics story.** `Solid()` objects push
+   others out; everything else just reports contact. No forces, no torque,
+   no restitution. If your game needs Angry Birds physics, this is not its
+   engine.
+4. **Text never collides.** A score label overlapping the ball will not
    bounce it. Text objects render and take clicks, nothing else.
-7. **Restart rolls back to the setup snapshot.** Objects added before the
+5. **`Restart` rolls a scene back to its setup.** Objects added before the
    scene first runs are restored (even if destroyed); objects and timers
-   spawned during play are dropped.
+   spawned during play are dropped. Variables captured in your closures are
+   yours to reset.
 
-## Roadmap
+## What's next
 
-- [x] **M1: Hello, collision** runs: window, sprites, rects, `OnUpdate`, `Move`, `OnCollision`, `OnClick`
-- [x] **M2: Pong** runs: velocity, `Solid()` bounce, `Text`/`SetText`, `Sound`
-- [x] **M3: Jumper** runs: `Gravity`, `WithGravity`, `Grounded`, tags, `Count`, scenes, `Go`/`Restart`, `Music`
-- [x] **M4: Zombie Night** runs: scene collision rules, `Every`/`After`, spawn/destroy at scale, spatial-hash broad phase
-- [x] **M5: Breakout and Memory** run: `Mouse`, scene `OnClick`, `Data`, `SetSprite`, `Shuffle`, `LifeTime`
-- [ ] Gameplay GIFs in the README, then a `v0.1.0` tag when the repo goes
-      public (pkg.go.dev serves the API reference from the doc comments)
+- Gameplay GIFs in the README
+- A `v0.1.0` tag when the repo goes public; pkg.go.dev then serves the full
+  API reference from the doc comments
