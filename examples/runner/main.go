@@ -33,7 +33,7 @@ func main() {
 	play.Gravity(2000)
 	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 
-	play.Add(engine.Rect(800, 60, nil).At(400, 570).Solid())
+	play.Add(engine.Rect(800, 60, nil).At(400, 580).Solid())
 	for i := range 20 {
 		play.Add(engine.Sprite("sprites/ground.png").At(float64(i)*40+20, 570).Visual())
 	}
@@ -86,16 +86,18 @@ func main() {
 		}
 	})
 
-	play.Every(1.1, func() {
+	spawnCrate := func() {
 		if !alive {
 			return
 		}
 		size := 30 + rand.Float64()*24
 		crate := play.Add(engine.Sprite("sprites/crate.png").Size(size, size).
 			At(830, 550-size/2).Tag("crate"))
-		crate.Vx = -(300 + dist/3) // the world speeds up as you go
+		crate.Vx = -(380 + dist/2.5) // the world speeds up as you go
 		crate.LifeTime(4)
-	})
+	}
+	play.After(0.2, spawnCrate) // no dead air: the first crate is already coming
+	play.Every(0.8, spawnCrate)
 
 	player.OnCollisionWith("crate", func(_ *engine.Object) {
 		if !alive {
