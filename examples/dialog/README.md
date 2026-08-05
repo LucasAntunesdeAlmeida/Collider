@@ -15,9 +15,9 @@ go run .
 The text system with visual hierarchy:
 
 ```go
-name := play.Add(engine.Text("").At(260, 430).
-    Font("fonts/gobold.ttf").   // custom TTF, loaded by path and cached
-    TextSize(30).               // larger than body text
+name := play.Add(engine.Text("").At(300, 425).
+    Font("fonts/pixel.ttf").    // custom TTF, loaded by path and cached
+    TextSize(22).               // larger than body text
     TextColor(engine.Yellow))   // colored speaker names
 ```
 
