@@ -37,6 +37,13 @@ $env:COLLIDER_AGENT="mcp"; go run .
 ```
 
 The game becomes an MCP server on stdio with `observe`, `act` and
-`reset` tools: connect any MCP client (Claude, for example) and it can
-play the same game the built-in pilot does. Agent play is on by default
-for every Collider game; games opt out with `g.DisallowAgents()`.
+`reset` tools. Connecting Claude to it is one command, nothing to
+install, because the game binary is the server:
+
+```powershell
+go build -o gemrush.exe .
+claude mcp add gemrush -e COLLIDER_AGENT=mcp -- .\gemrush.exe
+```
+
+Any MCP client works the same way. Agent play is on by default for
+every Collider game; games opt out with `g.DisallowAgents()`.

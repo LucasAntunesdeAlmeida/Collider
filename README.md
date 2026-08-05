@@ -170,6 +170,17 @@ zero overhead until used. Three ways in:
   while your agent function supplies the input each frame. Combine with
   the GIF recorder and an agent records your demo for you.
 
+Letting Claude play your game is one command, because the game itself is
+the MCP server (stdio): there is nothing to install.
+
+```powershell
+claude mcp add mygame -e COLLIDER_AGENT=mcp -- C:\path\to\mygame.exe
+```
+
+Any other MCP client works the same way (command plus env var), and the
+protocol is plain newline-delimited JSON-RPC, so even a Python script
+can drive a game through a subprocess.
+
 Tag your player `"player"` so agents can find themselves. A game can opt
 out entirely with `g.DisallowAgents()`. The
 [Gem Rush example](examples/agent/) is a game with no human input at
