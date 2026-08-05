@@ -94,8 +94,8 @@ func (g *Game) Observe() Observation {
 	}
 	obs.Scene = g.current.name
 	for _, o := range g.current.objects {
-		if o.dead {
-			continue
+		if o.dead || (o.visual && o.textStr == "") {
+			continue // scenery is noise for agents; text still matters
 		}
 		obs.Objects = append(obs.Objects, ObjectObs{
 			Tag: o.tag, X: o.X, Y: o.Y, Vx: o.Vx, Vy: o.Vy,

@@ -259,7 +259,7 @@ func (s *Scene) collide() {
 	idx := make([]int, 0, len(s.objects))
 	boxes := make([]physics.Box, 0, len(s.objects))
 	for i, o := range s.objects {
-		if o.dead || o.isText {
+		if o.dead || o.visual {
 			continue
 		}
 		idx = append(idx, i)
@@ -307,7 +307,7 @@ func (s *Scene) resolveSolids() {
 		}
 	}
 	for _, o := range s.objects {
-		if o.dead || o.solid || o.isText {
+		if o.dead || o.solid || o.visual {
 			continue
 		}
 		o.grounded = false

@@ -35,6 +35,8 @@ type Object struct {
 	fill       Color
 
 	isText    bool
+	isButton  bool
+	visual    bool
 	textStr   string
 	fontPath  string
 	textSize  float64
@@ -289,6 +291,8 @@ func (o *Object) draw(screen *ebiten.Image) {
 	switch {
 	case o.isText:
 		o.drawText(screen)
+	case o.isButton:
+		o.drawButton(screen)
 	case img != nil:
 		op := &ebiten.DrawImageOptions{}
 		b := img.Bounds()

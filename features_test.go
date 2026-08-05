@@ -259,6 +259,48 @@ func TestAnimationFrameTiming(t *testing.T) {
 	}
 }
 
+func TestVisualObjectsDoNotCollide(t *testing.T) {
+	g := New("test", 800, 600)
+	s := g.Scene("play")
+
+	s.Add(Rect(200, 200, Blue).At(0, 0).Visual()) // scenery
+	o := s.Add(Rect(20, 20, Red).At(0, 0))
+
+	hits := 0
+	o.OnCollision(func(*Object) { hits++ })
+	s.update(dt)
+
+	if hits != 0 {
+		t.Fatal("Visual objects must never take part in collisions")
+	}
+}
+
+func TestButtonSizesToItsLabelAndClicks(t *testing.T) {
+	g := New("test", 800, 600)
+	s := g.Scene("play")
+
+	b := s.Add(Button("PLAY").At(400, 300))
+	if b.w <= buttonPadX*2 || b.h <= buttonPadY*2 {
+		t.Fatalf("button should size around its label, got %fx%f", b.w, b.h)
+	}
+
+	clicked := 0
+	b.OnClick(func() { clicked++ })
+	if !b.contains(400, 300) {
+		t.Fatal("button bounds should contain its own center")
+	}
+	if b.contains(400-b.w, 300) {
+		t.Fatal("button bounds should not extend a full width to the left")
+	}
+
+	// Clicks reach buttons through the normal object path.
+	g.Headless("play")
+	g.Step(Action{MouseX: 400, MouseY: 300, Click: true})
+	if clicked != 1 {
+		t.Fatalf("button should fire OnClick once, got %d", clicked)
+	}
+}
+
 func TestShuffleKeepsElements(t *testing.T) {
 	in := []int{1, 2, 3, 4, 5, 6, 7, 8}
 	out := Shuffle(in)

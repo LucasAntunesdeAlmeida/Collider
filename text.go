@@ -56,7 +56,7 @@ func (o *Object) fontFace() text.Face {
 // clicked, but never take part in collisions: a score label overlapping
 // the ball must not bounce it.
 func Text(str string) *Object {
-	o := &Object{isText: true, textStr: str}
+	o := &Object{isText: true, visual: true, textStr: str}
 	o.measureText()
 	return o
 }
@@ -88,13 +88,14 @@ func (o *Object) SetText(str string) {
 }
 
 func (o *Object) measureText() {
-	if !o.isText {
-		return
-	}
-	if o.sizeSet {
+	if o.sizeSet || (!o.isText && !o.isButton) {
 		return
 	}
 	w, h := text.Measure(o.textStr, o.fontFace(), 0)
+	if o.isButton {
+		w += buttonPadX * 2
+		h += buttonPadY * 2
+	}
 	o.w, o.h = w, h
 }
 
