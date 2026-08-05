@@ -1,5 +1,7 @@
 # Memory (point-and-click puzzle)
 
+![demo](demo.gif)
+
 The counter-example: a complete game with **no movement and no physics at all**.
 Clicks are point-vs-object collisions, so a click-driven game is still squarely
 inside the engine's model, and it stays tiny.

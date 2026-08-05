@@ -1,5 +1,7 @@
 # Jumper (platformer)
 
+![demo](demo.gif)
+
 The genre that demands collision *response*, not just detection. Solid objects
 automatically push dynamic objects out (so you never sink through the floor),
 `Grounded()` tells you when you can jump, and gravity is one line on the scene.

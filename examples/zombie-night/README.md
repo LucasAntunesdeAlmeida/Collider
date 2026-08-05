@@ -1,5 +1,7 @@
 # Zombie Night (top-down shooter)
 
+![demo](demo.gif)
+
 The stress test for **runtime spawning**. Objects are created and destroyed
 constantly, so per-instance event wiring breaks down. Instead, collision rules
 are declared once at the scene level, by tag pair, and apply to every current

@@ -1,5 +1,7 @@
 # Pong (arcade)
 
+![demo](demo.gif)
+
 Two paddles, a ball, a score. The ball moves itself: objects have built-in
 velocity (`Vx`, `Vy`) applied every frame, so constant motion costs zero lines.
 

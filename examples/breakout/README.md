@@ -1,5 +1,7 @@
 # Breakout (brick breaker, with a real menu)
 
+![demo](demo.gif)
+
 Grid spawning, a win condition, mouse-follow control, and the full scene flow
 from menu to play to win or lose, all using the same objects and events model.
 

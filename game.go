@@ -1,10 +1,13 @@
 package collider
 
 import (
+	"os"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 
 	"github.com/LucasAntunesdeAlmeida/collider/internal/assets"
+	"github.com/LucasAntunesdeAlmeida/collider/internal/record"
 )
 
 // Game owns the window, the scenes, the asset cache and the main loop.
@@ -21,6 +24,9 @@ type Game struct {
 	assets      *assets.Cache
 	musicPath   string
 	musicPlayer *audio.Player
+
+	rec    *record.Recorder
+	recBuf []byte
 }
 
 // New creates a game with a window title and size in pixels.
@@ -83,13 +89,20 @@ func (g *Game) Width() float64 { return float64(g.width) }
 func (g *Game) Height() float64 { return float64(g.height) }
 
 // Run starts the game on the given scene and blocks until the window
-// closes or Quit is called.
+// closes or Quit is called. If the COLLIDER_RECORD environment variable
+// is set to a file path, the session is saved there as an animated GIF.
 func (g *Game) Run(name string) {
 	g.Go(name)
+	if path := os.Getenv("COLLIDER_RECORD"); path != "" {
+		g.rec = record.New(path, g.width, g.height)
+	}
 	ebiten.SetWindowTitle(g.title)
 	ebiten.SetWindowSize(g.width, g.height)
 	if err := ebiten.RunGame(&runner{g}); err != nil {
 		panic(err)
+	}
+	if g.rec != nil {
+		g.rec.Save()
 	}
 }
 
@@ -134,8 +147,16 @@ func (r *runner) Update() error {
 }
 
 func (r *runner) Draw(screen *ebiten.Image) {
-	if r.g.current != nil {
-		r.g.current.draw(screen)
+	g := r.g
+	if g.current != nil {
+		g.current.draw(screen)
+	}
+	if g.rec != nil && g.rec.ShouldCapture() {
+		if g.recBuf == nil {
+			g.recBuf = make([]byte, 4*g.width*g.height)
+		}
+		screen.ReadPixels(g.recBuf)
+		g.rec.Add(g.recBuf)
 	}
 }
 
