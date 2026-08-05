@@ -20,6 +20,8 @@ const (
 	A     = ebiten.KeyA
 	S     = ebiten.KeyS
 	D     = ebiten.KeyD
+	F     = ebiten.KeyF
+	R     = ebiten.KeyR
 )
 
 // Key reports whether a key is currently held down.

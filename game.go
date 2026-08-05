@@ -1,6 +1,7 @@
 package collider
 
 import (
+	"image"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -80,6 +81,28 @@ func (g *Game) Sound(path string) {
 // Quit closes the window and returns from Run.
 func (g *Game) Quit() {
 	g.quit = true
+}
+
+// Fullscreen switches fullscreen on or off. Callable any time,
+// including from an input handler for an F11 toggle.
+func (g *Game) Fullscreen(on bool) {
+	ebiten.SetFullscreen(on)
+}
+
+// Resizable lets the player resize the window; the game keeps its
+// logical resolution and scales.
+func (g *Game) Resizable(on bool) {
+	mode := ebiten.WindowResizingModeDisabled
+	if on {
+		mode = ebiten.WindowResizingModeEnabled
+	}
+	ebiten.SetWindowResizingMode(mode)
+}
+
+// Icon sets the window icon from an image asset.
+func (g *Game) Icon(path string) {
+	img := g.assets.Image(path)
+	ebiten.SetWindowIcon([]image.Image{img})
 }
 
 // Width returns the window width in pixels.

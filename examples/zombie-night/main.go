@@ -14,9 +14,9 @@ import (
 func main() {
 	g := engine.New("Zombie Night", 800, 600)
 	play := g.Scene("play")
-	play.Music("dread.wav")
+	play.Music("audios/dread.wav")
 
-	player := play.Add(engine.Sprite("hero.png").At(400, 300))
+	player := play.Add(engine.Sprite("sprites/hero.png").At(400, 300))
 	kills := 0
 	hud := play.Add(engine.Text("Kills: 0").At(70, 30))
 
@@ -37,7 +37,7 @@ func main() {
 
 	// A zombie every 1.5 seconds, from a random screen edge, walking at the player.
 	play.Every(1.5, func() {
-		z := play.Add(engine.Sprite("zombie.png").AtEdge().Tag("zombie"))
+		z := play.Add(engine.Sprite("sprites/zombie.png").AtEdge().Tag("zombie"))
 		z.OnUpdate(func(dt float64) { z.MoveToward(player.X, player.Y, 60*dt) })
 	})
 
@@ -46,7 +46,7 @@ func main() {
 		b := play.Add(engine.Rect(6, 6, engine.Yellow).At(player.X, player.Y).Tag("bullet"))
 		b.VelocityToward(x, y, 600)
 		b.LifeTime(2)
-		g.Sound("shot.wav")
+		g.Sound("audios/shot.wav")
 	})
 
 	// Scene-level rules: apply to every zombie and bullet, present or future.
@@ -60,7 +60,7 @@ func main() {
 
 	over := g.Scene("gameover")
 	over.Add(engine.Text("They got you.").At(400, 280))
-	again := over.Add(engine.Sprite("again.png").At(400, 360))
+	again := over.Add(engine.Sprite("sprites/again.png").At(400, 360))
 	again.OnClick(func() {
 		kills = 0
 		g.Restart("play")

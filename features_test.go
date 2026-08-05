@@ -1,8 +1,12 @@
 package collider
 
 import (
+	"bytes"
+	"image"
+	"image/png"
 	"math"
 	"testing"
+	"testing/fstest"
 )
 
 func TestGravityLandingAndGrounded(t *testing.T) {
@@ -203,6 +207,55 @@ func TestTextObjectsDoNotCollide(t *testing.T) {
 
 	if hits != 0 {
 		t.Fatal("text objects must never take part in collisions")
+	}
+}
+
+func TestUseAssetsLoadsFromEmbeddedFS(t *testing.T) {
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 3, 5))); err != nil {
+		t.Fatal(err)
+	}
+	UseAssets(fstest.MapFS{
+		"sprites/p.png": &fstest.MapFile{Data: buf.Bytes()},
+	})
+	defer UseAssets(nil)
+
+	g := New("test", 800, 600)
+	s := g.Scene("play")
+	o := s.Add(Sprite("sprites/p.png"))
+
+	if o.w != 3 || o.h != 5 {
+		t.Fatalf("sprite should load from the embedded FS with its real size, got %fx%f", o.w, o.h)
+	}
+}
+
+func TestAnimationFrameTiming(t *testing.T) {
+	o := &Object{}
+	o.anims = map[string]*animation{
+		"run":   {frames: 4, fps: 10},
+		"death": {frames: 4, fps: 10},
+	}
+
+	o.play("run", false)
+	o.animate(0.25)
+	if f := o.frameIndex(o.anims["run"]); f != 2 {
+		t.Fatalf("0.25s at 10fps should be frame 2, got %d", f)
+	}
+	o.animate(0.2)
+	if f := o.frameIndex(o.anims["run"]); f != 0 {
+		t.Fatalf("looping animation should wrap to frame 0, got %d", f)
+	}
+
+	elapsed := o.animTime
+	o.play("run", false)
+	if o.animTime != elapsed {
+		t.Fatal("re-playing the active animation must not reset it")
+	}
+
+	o.play("death", true)
+	o.animate(2)
+	if f := o.frameIndex(o.anims["death"]); f != 3 {
+		t.Fatalf("PlayOnce should hold the last frame (3), got %d", f)
 	}
 }
 

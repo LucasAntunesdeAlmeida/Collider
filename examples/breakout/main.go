@@ -11,13 +11,13 @@ func main() {
 	g := engine.New("Breakout", 800, 600)
 
 	menu := g.Scene("menu")
-	menu.Music("menu.wav")
+	menu.Music("audios/menu.wav")
 	menu.Add(engine.Text("BREAKOUT").At(400, 200))
-	start := menu.Add(engine.Sprite("start.png").At(400, 350))
+	start := menu.Add(engine.Sprite("sprites/start.png").At(400, 350))
 	start.OnClick(func() { g.Go("play") })
 
 	play := g.Scene("play")
-	play.Music("action.wav")
+	play.Music("audios/action.wav")
 
 	colors := []engine.Color{engine.Red, engine.Orange, engine.Yellow, engine.Green, engine.Blue}
 	for row := range 5 {
@@ -39,7 +39,7 @@ func main() {
 	ball.OnCollisionWith("brick", func(brick *engine.Object) {
 		brick.Destroy()
 		ball.Vy = -ball.Vy
-		g.Sound("break.wav")
+		g.Sound("audios/break.wav")
 		if play.Count("brick") == 0 {
 			g.Go("win")
 		}

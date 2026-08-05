@@ -3,10 +3,10 @@
 package assets
 
 import (
+	"bytes"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
-	"os"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -38,12 +38,11 @@ func (c *Cache) Image(path string) *ebiten.Image {
 	if img, ok := c.images[path]; ok {
 		return img
 	}
-	f, err := os.Open(path)
+	b, err := ReadFile(path)
 	if err != nil {
 		panic("collider: cannot open sprite " + path + ": " + err.Error())
 	}
-	defer f.Close()
-	src, _, err := image.Decode(f)
+	src, _, err := image.Decode(bytes.NewReader(b))
 	if err != nil {
 		panic("collider: cannot decode sprite " + path + ": " + err.Error())
 	}
@@ -58,7 +57,7 @@ func (c *Cache) fileLocked(path string) []byte {
 	if b, ok := c.files[path]; ok {
 		return b
 	}
-	b, err := os.ReadFile(path)
+	b, err := ReadFile(path)
 	if err != nil {
 		panic("collider: cannot open audio file " + path + ": " + err.Error())
 	}

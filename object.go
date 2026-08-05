@@ -34,8 +34,16 @@ type Object struct {
 	img        *ebiten.Image
 	fill       Color
 
-	isText  bool
-	textStr string
+	isText    bool
+	textStr   string
+	fontPath  string
+	textSize  float64
+	textColor Color
+
+	anims    map[string]*animation
+	curAnim  string
+	animTime float64
+	animOnce bool
 
 	dead  bool
 	scene *Scene
@@ -141,6 +149,9 @@ func (o *Object) resolve(g *Game) {
 			b := o.img.Bounds()
 			o.w, o.h = float64(b.Dx()), float64(b.Dy())
 		}
+	}
+	for _, a := range o.anims {
+		a.load(g, o)
 	}
 }
 
@@ -271,18 +282,22 @@ func (o *Object) contains(x, y float64) bool {
 }
 
 func (o *Object) draw(screen *ebiten.Image) {
+	img := o.img
+	if f := o.animFrame(); f != nil {
+		img = f
+	}
 	switch {
 	case o.isText:
 		o.drawText(screen)
-	case o.img != nil:
+	case img != nil:
 		op := &ebiten.DrawImageOptions{}
-		b := o.img.Bounds()
+		b := img.Bounds()
 		iw, ih := float64(b.Dx()), float64(b.Dy())
 		if iw != o.w || ih != o.h {
 			op.GeoM.Scale(o.w/iw, o.h/ih)
 		}
 		op.GeoM.Translate(o.X-o.w/2, o.Y-o.h/2)
-		screen.DrawImage(o.img, op)
+		screen.DrawImage(img, op)
 	case o.fill != nil:
 		vector.FillRect(screen,
 			float32(o.X-o.w/2), float32(o.Y-o.h/2),

@@ -8,6 +8,13 @@
 *.test
 *.out
 
+# Runtime save files from example games
+examples/**/save.json
+
+# Web build outputs (regenerated per PUBLISHING.md)
+examples/ship/web/
+examples/ship/ship-web.zip
+
 # Editor and OS noise
 .vscode/
 .idea/

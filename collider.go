@@ -16,3 +16,27 @@
 //
 // See README.md for the full spec and five complete example games.
 package collider
+
+import (
+	"io/fs"
+
+	"github.com/LucasAntunesdeAlmeida/collider/internal/assets"
+)
+
+// UseAssets routes all asset loading (sprites, sounds, music, fonts)
+// through a filesystem instead of the disk: pass an embed.FS and the
+// game ships as a single self-contained binary.
+//
+//	//go:embed sprites audios
+//	var content embed.FS
+//
+//	func main() {
+//		collider.UseAssets(content)
+//		...
+//	}
+//
+// Call it before creating objects. Without it, paths load from disk,
+// which is what you want during development.
+func UseAssets(f fs.FS) {
+	assets.SetFS(f)
+}

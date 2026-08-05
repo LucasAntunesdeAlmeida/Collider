@@ -24,9 +24,10 @@ type Scene struct {
 	gravity   float64
 	musicPath string
 
-	timers  []*timer
-	onClick []func(x, y float64)
-	rules   []collisionRule
+	timers   []*timer
+	onClick  []func(x, y float64)
+	onUpdate []func(dt float64)
+	rules    []collisionRule
 
 	// touching tracks currently overlapping pairs so collision events
 	// fire on enter, not on every frame of overlap.
@@ -100,6 +101,12 @@ func (s *Scene) OnClick(fn func(x, y float64)) {
 	s.onClick = append(s.onClick, fn)
 }
 
+// OnUpdate runs every frame while the scene is active, before object
+// updates. The place for scene-wide input like a fullscreen toggle.
+func (s *Scene) OnUpdate(fn func(dt float64)) {
+	s.onUpdate = append(s.onUpdate, fn)
+}
+
 // OnCollision declares a rule for every current and future pair of
 // objects with these tags. The callback receives the objects in tag
 // order: the tagA object first.
@@ -159,6 +166,10 @@ func (s *Scene) update(dt float64) {
 	s.clicks()
 	s.tick(dt)
 
+	for _, fn := range slices.Clone(s.onUpdate) {
+		fn(dt)
+	}
+
 	// Snapshot the length so objects added during callbacks start next frame.
 	n := len(s.objects)
 	for i := range n {
@@ -175,6 +186,7 @@ func (s *Scene) update(dt float64) {
 		if o.dead {
 			continue
 		}
+		o.animate(dt)
 		if o.gravity {
 			o.Vy += s.gravity * dt
 		}

@@ -42,7 +42,7 @@ func main() {
 
 	ball.OnCollision(func(_ *engine.Object) {
 		ball.Vx = -ball.Vx
-		g.Sound("bounce.wav")
+		g.Sound("audios/bounce.wav")
 	})
 
 	ball.OnUpdate(func(_ float64) {
