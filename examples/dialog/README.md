@@ -1,4 +1,6 @@
-# Dialog (visual novel style, custom fonts)
+﻿# Dialog (visual novel style, custom fonts)
+
+![demo](demo.gif)
 
 A short conversation with a typewriter effect. Click to advance; clicking
 mid-line reveals the rest instantly.

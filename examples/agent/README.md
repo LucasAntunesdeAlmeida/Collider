@@ -1,4 +1,6 @@
-# Gem Rush (built for agent play)
+﻿# Gem Rush (built for agent play)
+
+![demo](demo.gif)
 
 Collect all six gems before the timer runs out. Playable three ways,
 which is the point of this example.

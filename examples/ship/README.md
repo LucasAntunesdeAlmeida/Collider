@@ -1,6 +1,8 @@
-# Ship (built to be published, and it is)
+﻿# Ship (built to be published, and it is)
 
-**[Play it in your browser on itch.io](https://lucasantunesdealmeida.itch.io/ship)** —
+![demo](demo.gif)
+
+**[Play it in your browser on itch.io](https://lucasantunesdealmeida.itch.io/ship)**:
 this exact code, built to WebAssembly and uploaded per the guide.
 
 A small dodge game whose point is the shipping pipeline: assets are

@@ -1,4 +1,6 @@
-# Catcher (save system)
+﻿# Catcher (save system)
+
+![demo](demo.gif)
 
 Catch falling gems with the paddle for 30 seconds. Your best score is
 saved to `save.json` and greets you on the next run.

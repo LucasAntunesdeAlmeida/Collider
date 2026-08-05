@@ -1,4 +1,6 @@
-# Arena (survival, and the extension pattern)
+﻿# Arena (survival, and the extension pattern)
+
+![demo](demo.gif)
 
 Survive the chasers: WASD to move, three hit points, brief invulnerability
 after each hit, knockback on contact. New chasers spawn every two seconds

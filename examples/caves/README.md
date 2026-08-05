@@ -1,4 +1,6 @@
-# Caves (procedural generation)
+﻿# Caves (procedural generation)
+
+![demo](demo.gif)
 
 Explore a cave that never existed before you ran the game, and collect
 every gem. Winning generates a brand new cave.

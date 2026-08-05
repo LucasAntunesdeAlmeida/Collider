@@ -1,4 +1,6 @@
-# Runner (endless runner, sprite animations)
+﻿# Runner (endless runner, sprite animations)
+
+![demo](demo.gif)
 
 The player runs automatically; Space is the only input. Jump the crates,
 survive as far as you can. Distance is your score.

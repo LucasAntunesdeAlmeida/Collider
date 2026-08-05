@@ -1,4 +1,6 @@
-# Dungeon (multiple screens, key and lock)
+﻿# Dungeon (multiple screens, key and lock)
+
+![demo](demo.gif)
 
 Four connected rooms. Find the key, open the locked door, reach the
 treasure. Walk off a screen edge to enter the neighboring room.
