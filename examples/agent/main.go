@@ -11,8 +11,17 @@
 // See bot/ for a plain Go program playing it through the same API.
 package main
 
-import "github.com/LucasAntunesdeAlmeida/collider/examples/agent/game"
+import (
+	"os"
+
+	"github.com/LucasAntunesdeAlmeida/collider/examples/agent/game"
+)
 
 func main() {
-	game.New().Run("play")
+	// Humans get the menu; agents jump straight into the round.
+	scene := "menu"
+	if os.Getenv("COLLIDER_AGENT") != "" {
+		scene = "play"
+	}
+	game.New().Run(scene)
 }

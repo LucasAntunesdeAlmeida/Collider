@@ -8,12 +8,15 @@ package main
 import (
 	"fmt"
 	"math"
+	"os"
 
 	engine "github.com/LucasAntunesdeAlmeida/collider"
 	"github.com/LucasAntunesdeAlmeida/collider/examples/agent/game"
 )
 
 func main() {
+	os.Chdir("..") // assets resolve relative to the game's folder
+
 	g := game.New()
 	g.Headless("play")
 

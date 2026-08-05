@@ -150,6 +150,7 @@ func runner() {
 func zombieNight() {
 	d := "examples/zombie-night/"
 	strip(d+"sprites/hero.png", 3, heroWalk)
+	art(d+"sprites/hero-idle.png", 3, heroWalk[0])
 	strip(d+"sprites/zombie.png", 3, zombieWalk)
 	art(d+"sprites/bullet.png", 3, bulletArt)
 	tile(d+"sprites/ground.png", 40, 40, rgb(0x1B2418), rgb(0x2A3524), rgb(0x121A10), 10)
@@ -164,6 +165,7 @@ func zombieNight() {
 func arena() {
 	d := "examples/arena/"
 	strip(d+"sprites/player.png", 3, heroWalk)
+	art(d+"sprites/idle.png", 3, heroWalk[0])
 	strip(d+"sprites/chaser.png", 3, zombieWalk)
 	art(d+"sprites/heart.png", 3, []string{
 		" RR  RR ",
@@ -183,6 +185,7 @@ func arena() {
 func gemRush() {
 	d := "examples/agent/"
 	strip(d+"sprites/player.png", 3, heroWalk)
+	art(d+"sprites/idle.png", 3, heroWalk[0])
 	strip(d+"sprites/gem.png", 3, gemSparkle)
 	tile(d+"sprites/floor.png", 40, 40, rgb(0x1E2A4A), rgb(0x2C3C66), rgb(0x141C33), 5)
 	backdrop(d+"sprites/background.png", 800, 600, rgb(0x101830), rgb(0x1E2A4A))

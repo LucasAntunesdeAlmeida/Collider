@@ -17,39 +17,54 @@ type Player struct {
 	invulnerable bool
 }
 
-// NewPlayer creates the player in a scene and wires its movement.
+// NewPlayer creates the animated player in a scene and wires movement.
 func NewPlayer(g *engine.Game, s *engine.Scene) *Player {
 	p := &Player{
-		Object: s.Add(engine.Rect(36, 36, engine.Blue).At(400, 300)),
-		HP:     3,
-		scene:  s,
+		Object: s.Add(engine.Rect(32, 45, nil).At(400, 300).Tag("player").
+			Animation("walk", "sprites/player.png", 2, 8).
+			Animation("idle", "sprites/idle.png", 1, 1)),
+		HP:    3,
+		scene: s,
 	}
+	p.Play("idle")
 	p.OnUpdate(func(dt float64) {
-		if g.Key(engine.W) {
+		moving := false
+		if g.Key(engine.W) || g.Key(engine.Up) {
 			p.Move(0, -260*dt)
+			moving = true
 		}
-		if g.Key(engine.S) {
+		if g.Key(engine.S) || g.Key(engine.Down) {
 			p.Move(0, 260*dt)
+			moving = true
 		}
-		if g.Key(engine.A) {
+		if g.Key(engine.A) || g.Key(engine.Left) {
 			p.Move(-260*dt, 0)
+			moving = true
 		}
-		if g.Key(engine.D) {
+		if g.Key(engine.D) || g.Key(engine.Right) {
 			p.Move(260*dt, 0)
+			moving = true
+		}
+		if moving {
+			p.Play("walk")
+		} else {
+			p.Play("idle")
 		}
 	})
 	return p
 }
 
 // TakeDamage applies damage unless the player is in the invulnerability
-// window, then opens a new window for one second.
-func (p *Player) TakeDamage(n int) {
+// window, then opens a new window for one second. Reports whether the
+// hit landed.
+func (p *Player) TakeDamage(n int) bool {
 	if p.invulnerable {
-		return
+		return false
 	}
 	p.HP -= n
 	p.invulnerable = true
 	p.scene.After(1, func() { p.invulnerable = false })
+	return true
 }
 
 // Knockback shoves the player away from a point of impact.
