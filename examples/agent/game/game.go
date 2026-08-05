@@ -1,12 +1,13 @@
-// Package game is the shared game definition for the agent example:
-// collect all gems before the time runs out. Built to be played by
-// humans (main.go) and by programs or AI agents (bot/, or MCP via
-// COLLIDER_AGENT=mcp), which is why every object that matters carries
-// a tag and the HUD is a text object agents can read.
+// Package game is Gem Rush: collect all gems before the timer runs
+// out. This game accepts NO human input by design: it exists to be
+// played by agents (the built-in Decide pilot, a headless bot, or any
+// MCP client). Every object that matters carries a tag and the HUD is
+// a text object, so the whole game state is observable.
 package game
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 
 	engine "github.com/LucasAntunesdeAlmeida/collider"
@@ -19,23 +20,16 @@ const (
 	font = "fonts/pixel.ttf"
 )
 
-// New builds the game. The caller decides how it runs: g.Run for a
-// window, g.Headless plus g.Step for a bot.
+// New builds the game. The caller decides how it runs: Autopilot for a
+// watchable window, Headless plus Step for a bot, MCP for external
+// agents.
 func New() *engine.Game {
 	g := engine.New("Gem Rush", 800, 600)
 
-	// --- Menu (humans start here; bots jump straight to "play") ---
-	menu := g.Scene("menu")
-	menu.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
-	menu.Add(engine.Text("GEM RUSH").At(400, 150).Font(font).TextSize(44).TextColor(engine.Yellow))
-	menu.Add(engine.Text("6 GEMS   30 SECONDS").At(400, 225).Font(font).TextSize(14))
-	menu.Add(engine.Text("ALSO PLAYABLE BY BOTS AND AI AGENTS").At(400, 500).Font(font).TextSize(10))
-	menu.Add(engine.Button("PLAY").At(400, 360).Font(font).TextSize(24).Color(engine.Green)).
-		OnClick(func() { g.Restart("play") })
-
-	// --- Round ---
 	play := g.Scene("play")
 	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	play.Add(engine.Text("AGENT AT PLAY  NO HUMAN INPUT").At(400, 580).
+		Font(font).TextSize(10).Visual())
 
 	player := play.Add(engine.Rect(32, 45, nil).At(400, 300).Tag("player").
 		Animation("walk", "sprites/player.png", 2, 8).
@@ -46,7 +40,7 @@ func New() *engine.Game {
 
 	for range Gems {
 		gem := play.Add(engine.Rect(30, 24, nil).
-			At(40+rand.Float64()*720, 60+rand.Float64()*500).Tag("gem").
+			At(40+rand.Float64()*720, 60+rand.Float64()*480).Tag("gem").
 			Animation("sparkle", "sprites/gem.png", 2, 4))
 		gem.Play("sparkle")
 	}
@@ -54,19 +48,19 @@ func New() *engine.Game {
 	left := TimeLimit
 	player.OnUpdate(func(dt float64) {
 		moving := false
-		if g.Key(engine.W) || g.Key(engine.Up) {
+		if g.Key(engine.W) {
 			player.Move(0, -240*dt)
 			moving = true
 		}
-		if g.Key(engine.S) || g.Key(engine.Down) {
+		if g.Key(engine.S) {
 			player.Move(0, 240*dt)
 			moving = true
 		}
-		if g.Key(engine.A) || g.Key(engine.Left) {
+		if g.Key(engine.A) {
 			player.Move(-240*dt, 0)
 			moving = true
 		}
-		if g.Key(engine.D) || g.Key(engine.Right) {
+		if g.Key(engine.D) {
 			player.Move(240*dt, 0)
 			moving = true
 		}
@@ -94,20 +88,65 @@ func New() *engine.Game {
 		}
 	})
 
-	// --- End screens ---
-	win := g.Scene("win")
-	win.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
-	win.Add(engine.Text("ALL GEMS COLLECTED").At(400, 240).Font(font).TextSize(24).
-		TextColor(engine.Yellow).Tag("result"))
-	win.Add(engine.Button("AGAIN").At(400, 400).Font(font).TextSize(18).Color(engine.Green)).
-		OnClick(func() { g.Restart("play") })
-
-	lose := g.Scene("lose")
-	lose.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
-	lose.Add(engine.Text("TIME'S UP").At(400, 240).Font(font).TextSize(28).
-		TextColor(engine.Orange).Tag("result"))
-	lose.Add(engine.Button("AGAIN").At(400, 400).Font(font).TextSize(18).Color(engine.Green)).
-		OnClick(func() { g.Restart("play") })
+	// End screens auto-restart: an agent-only game keeps itself looping.
+	endScene := func(name, title string, c engine.Color) {
+		s := g.Scene(name)
+		s.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+		s.Add(engine.Text(title).At(400, 260).Font(font).TextSize(26).
+			TextColor(c).Tag("result"))
+		s.Add(engine.Text("NEXT ROUND SOON").At(400, 330).Font(font).TextSize(12))
+		wait := 0.0
+		s.OnUpdate(func(dt float64) {
+			wait += dt
+			if wait > 1.5 {
+				wait = 0
+				g.Restart("play")
+			}
+		})
+	}
+	endScene("win", "ALL GEMS COLLECTED", engine.Yellow)
+	endScene("lose", "TIME'S UP", engine.Orange)
 
 	return g
+}
+
+// Decide is the built-in pilot: given an observation, chase the nearest
+// gem. It uses only what any external agent gets: tags and positions.
+func Decide(obs engine.Observation) engine.Action {
+	var player *engine.ObjectObs
+	var gems []engine.ObjectObs
+	for i, o := range obs.Objects {
+		switch o.Tag {
+		case "player":
+			player = &obs.Objects[i]
+		case "gem":
+			gems = append(gems, o)
+		}
+	}
+	if player == nil || len(gems) == 0 {
+		return engine.Action{}
+	}
+
+	target := gems[0]
+	best := math.Hypot(target.X-player.X, target.Y-player.Y)
+	for _, gem := range gems[1:] {
+		if d := math.Hypot(gem.X-player.X, gem.Y-player.Y); d < best {
+			best, target = d, gem
+		}
+	}
+
+	var keys []engine.Key
+	if target.X < player.X-4 {
+		keys = append(keys, engine.A)
+	}
+	if target.X > player.X+4 {
+		keys = append(keys, engine.D)
+	}
+	if target.Y < player.Y-4 {
+		keys = append(keys, engine.W)
+	}
+	if target.Y > player.Y+4 {
+		keys = append(keys, engine.S)
+	}
+	return engine.Action{Keys: keys}
 }

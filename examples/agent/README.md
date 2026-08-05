@@ -1,45 +1,42 @@
-﻿# Gem Rush (built for agent play)
+# Gem Rush (agents only)
 
 ![demo](demo.gif)
 
-Collect all six gems before the timer runs out. Playable three ways,
-which is the point of this example.
+Collect all six gems before the timer runs out. This game accepts **no
+human input by design**: it exists to be played by agents, and the demo
+GIF above was recorded by the game's own agent playing itself.
 
-## 1. As a human
+## Watch the agent play
 
 ```bash
 cd examples/agent
 go run .
 ```
 
-WASD or arrows. The game is ordinary Collider code; the only
-agent-friendly choices are tags on everything that matters ("player",
-"gem", "hud") and game state readable from a text object.
+A window opens and the built-in pilot plays, endlessly looping rounds.
+It runs on `g.Autopilot(game.Decide)`: every frame the engine hands the
+pilot an observation (tags, positions, HUD text) and receives an action
+back. `Decide` chases the nearest gem using nothing an external agent
+would not have.
 
-## 2. As a Go program (in process)
+## Headless (the CI shape)
 
 ```bash
 cd examples/agent/bot
 go run .
 ```
 
-The bot in [bot/main.go](bot/main.go) plays headless through the same
-information an external agent gets: `g.Headless("play")`, then a loop of
-`g.Step(action)` reading observations and chasing the nearest gem. No
-window, no game internals, deterministic. It wins in about 5 game
-seconds.
+The same `Decide` pilot drives the game with no window at all through
+`g.Headless("play")` and `g.Step(action)`, then prints how long the win
+took (~4 game seconds). This is how you playtest games with bots in CI.
 
-This is also the pattern for automated playtesting in CI: drive the
-game, assert it reaches "win", no display needed.
-
-## 3. As an AI agent (MCP)
+## External agents (MCP)
 
 ```powershell
 $env:COLLIDER_AGENT="mcp"; go run .
 ```
 
-The same binary becomes an MCP server on stdio with three tools:
-`observe` (scene and objects as JSON), `act` (hold keys, click, advance
-N frames), `reset`. Connect any MCP client and it can play. Agent play
-is on by default for every Collider game; a game can opt out with
-`g.DisallowAgents()`.
+The game becomes an MCP server on stdio with `observe`, `act` and
+`reset` tools: connect any MCP client (Claude, for example) and it can
+play the same game the built-in pilot does. Agent play is on by default
+for every Collider game; games opt out with `g.DisallowAgents()`.

@@ -65,12 +65,20 @@ func (g *Game) Headless(scene string) {
 	g.advance(0) // activate the scene so Observe works immediately
 }
 
-// Step advances exactly one frame with the given input and returns the
-// resulting observation. Deterministic: same actions, same results.
-func (g *Game) Step(a Action) Observation {
-	if !g.headless {
-		panic("collider: call Headless before Step")
+// Autopilot runs the game windowed while an agent function supplies the
+// input: fn receives each frame's observation and returns the action to
+// hold. Watch a bot play, or combine with COLLIDER_RECORD and let the
+// agent record its own demo GIF. Call before Run.
+func (g *Game) Autopilot(fn func(Observation) Action) {
+	if g.agentsOff {
+		panic("collider: agent play is disallowed by this game")
 	}
+	g.agentIn = &agentInput{keys: map[Key]bool{}}
+	g.input = g.agentIn
+	g.pilot = fn
+}
+
+func (g *Game) injectAction(a Action) {
 	in := g.agentIn
 	clear(in.keys)
 	for _, k := range a.Keys {
@@ -78,10 +86,17 @@ func (g *Game) Step(a Action) Observation {
 	}
 	in.x, in.y = a.MouseX, a.MouseY
 	in.click = a.Click
+}
 
+// Step advances exactly one frame with the given input and returns the
+// resulting observation. Deterministic: same actions, same results.
+func (g *Game) Step(a Action) Observation {
+	if !g.headless {
+		panic("collider: call Headless before Step")
+	}
+	g.injectAction(a)
 	g.advance(1.0 / 60.0)
-
-	in.click = false
+	g.agentIn.click = false
 	return g.Observe()
 }
 

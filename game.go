@@ -26,6 +26,7 @@ type Game struct {
 	headless  bool
 	agentsOff bool
 	agentIn   *agentInput
+	pilot     func(Observation) Action
 
 	assets      *assets.Cache
 	musicPath   string
@@ -190,7 +191,13 @@ func (r *runner) Update() error {
 	if g.quit {
 		return ebiten.Termination
 	}
+	if g.pilot != nil && g.current != nil {
+		g.injectAction(g.pilot(g.Observe()))
+	}
 	g.advance(1.0 / float64(ebiten.TPS()))
+	if g.agentIn != nil {
+		g.agentIn.click = false
+	}
 	return nil
 }
 
