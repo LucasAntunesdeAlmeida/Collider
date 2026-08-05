@@ -1,10 +1,6 @@
-// Dungeon: four connected rooms, a key, a locked door, a treasure.
-// Walk off a screen edge to enter the neighboring room.
-//
-// This example proves multiple screens: rooms are ASCII layouts in
-// scripts/, one scene rebuilds its content on each transition, and
-// world state (key collected, door opened) is plain Go variables that
-// survive room changes.
+// Dungeon: four connected rooms, a key, a locked door, a treasure
+// chest. Walk off a screen edge to enter the neighboring room. Menu,
+// animated hero, drawn props, tiled walls.
 //
 // Run from this folder: cd examples/dungeon && go run .
 package main
@@ -16,13 +12,30 @@ import (
 	"github.com/LucasAntunesdeAlmeida/collider/examples/dungeon/scripts"
 )
 
+const font = "fonts/pixel.ttf"
+
 func main() {
 	g := engine.New("Dungeon", 800, 600)
+
+	// --- Menu ---
+	menu := g.Scene("menu")
+	menu.Music("audios/dungeon.wav")
+	menu.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	menu.Add(engine.Text("DUNGEON").At(400, 150).Font(font).TextSize(48).TextColor(engine.Orange))
+	menu.Add(engine.Text("FIND THE KEY  OPEN THE VAULT").At(400, 225).Font(font).TextSize(12))
+	menu.Add(engine.Text("WASD OR ARROWS   EDGES LEAD ONWARD").At(400, 500).Font(font).TextSize(10))
+	menu.Add(engine.Button("ENTER").At(400, 360).Font(font).TextSize(22).Color(engine.Orange)).
+		OnClick(func() { g.Go("play") })
+
+	// --- Dungeon ---
 	play := g.Scene("play")
 	play.Music("audios/dungeon.wav")
+	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 
-	player := play.Add(engine.Rect(22, 22, engine.Blue).At(120, 120))
-	hud := play.Add(engine.Text("").At(110, 22).TextSize(18))
+	player := play.Add(engine.Rect(28, 40, nil).At(120, 120).Tag("player").
+		Animation("walk", "sprites/player.png", 2, 8))
+	player.Play("walk")
+	hud := play.Add(engine.Text("").At(140, 20).Font(font).TextSize(12))
 
 	cur := [2]int{0, 0}
 	hasKey := false
@@ -36,8 +49,12 @@ func main() {
 		mapObjs = mapObjs[:0]
 
 		layout := scripts.Rooms[cur]
+		cell := scripts.Cell
 		at := func(x, y int) (float64, float64) {
-			return float64(x)*scripts.Cell + scripts.Cell/2, float64(y)*scripts.Cell + scripts.Cell/2
+			return float64(x)*cell + cell/2, float64(y)*cell + cell/2
+		}
+		add := func(o *engine.Object) {
+			mapObjs = append(mapObjs, play.Add(o))
 		}
 		for y, row := range layout {
 			for x := 0; x < len(row); {
@@ -47,38 +64,37 @@ func main() {
 					for x < len(row) && row[x] == '#' {
 						x++
 					}
-					w := float64(x-start) * scripts.Cell
+					w := float64(x-start) * cell
 					cx, cy := at(start, y)
-					wall := play.Add(engine.Rect(w, scripts.Cell, engine.Green).
-						At(cx+w/2-scripts.Cell/2, cy).Solid())
-					mapObjs = append(mapObjs, wall)
+					add(engine.Rect(w, cell, nil).At(cx+w/2-cell/2, cy).Solid())
+					for i := start; i < x; i++ {
+						tx, ty := at(i, y)
+						add(engine.Sprite("sprites/wall.png").At(tx, ty).Visual())
+					}
 					continue
 				case 'K':
 					if !hasKey {
 						cx, cy := at(x, y)
-						mapObjs = append(mapObjs, play.Add(
-							engine.Rect(16, 16, engine.Yellow).At(cx, cy).Tag("key")))
+						add(engine.Sprite("sprites/key.png").At(cx, cy).Tag("key"))
 					}
 				case 'D':
 					if !doorOpen {
 						cx, cy := at(x, y)
-						mapObjs = append(mapObjs, play.Add(
-							engine.Rect(scripts.Cell, scripts.Cell, engine.Orange).
-								At(cx, cy).Solid().Tag("door")))
+						add(engine.Sprite("sprites/door.png").Size(cell, cell).
+							At(cx, cy).Solid().Tag("door"))
 					}
 				case 'T':
 					cx, cy := at(x, y)
-					mapObjs = append(mapObjs, play.Add(
-						engine.Rect(24, 24, engine.Red).At(cx, cy).Tag("treasure")))
+					add(engine.Sprite("sprites/chest.png").At(cx, cy).Tag("treasure"))
 				}
 				x++
 			}
 		}
-		key := "no"
+		key := "NO"
 		if hasKey {
-			key = "yes"
+			key = "YES"
 		}
-		hud.SetText(fmt.Sprintf("Room %d,%d   Key: %s", cur[0], cur[1], key))
+		hud.SetText(fmt.Sprintf("ROOM %d.%d  KEY %s", cur[0], cur[1], key))
 	}
 	build()
 
@@ -130,22 +146,26 @@ func main() {
 			g.Sound("audios/door.wav")
 		}
 	})
+
+	// --- Treasure ---
+	win := g.Scene("win")
+	win.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
+	win.Add(engine.Text("TREASURE!").At(400, 200).Font(font).TextSize(40).TextColor(engine.Yellow))
+	win.Add(engine.Text("THE VAULT IS YOURS").At(400, 280).Font(font).TextSize(14))
+	win.Add(engine.Button("EXPLORE AGAIN").At(400, 420).Font(font).TextSize(16).Color(engine.Orange)).
+		OnClick(func() {
+			hasKey = false
+			doorOpen = false
+			cur = [2]int{0, 0}
+			player.At(120, 120)
+			build()
+			g.Go("play")
+		})
+
 	player.OnCollisionWith("treasure", func(_ *engine.Object) {
 		g.Sound("audios/win.wav")
 		g.Go("win")
 	})
 
-	win := g.Scene("win")
-	win.Add(engine.Text("You found the treasure!").At(400, 270).TextSize(32))
-	win.Add(engine.Text("Click to explore again.").At(400, 330))
-	win.OnClick(func(_, _ float64) {
-		hasKey = false
-		doorOpen = false
-		cur = [2]int{0, 0}
-		player.At(120, 120)
-		build()
-		g.Go("play")
-	})
-
-	g.Run("play")
+	g.Run("menu")
 }
