@@ -3,6 +3,8 @@
 **The fastest way to a playable 2D game in Go. Every game you build can be
 played by humans and by AI agents, out of the box.**
 
+![Collider: 2D games in Go, played by humans and AI agents](.github/social-preview.png)
+
 Collider is a code-first 2D game engine built around one idea: games are made of
 objects that collide, and things that happen when they do. You import the library,
 describe your objects, attach events, and you have a game. No editor, no project
