@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/LucasAntunesdeAlmeida/collider/internal/physics"
 )
@@ -234,7 +233,7 @@ func (s *Scene) tick(dt float64) {
 // clicks fires scene handlers on any click, then OnClick on the topmost
 // object under the cursor.
 func (s *Scene) clicks() {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if !s.game.input.clickJustPressed() {
 		return
 	}
 	x, y := s.game.Mouse()

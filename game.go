@@ -22,6 +22,11 @@ type Game struct {
 	next    *Scene
 	quit    bool
 
+	input     inputSource
+	headless  bool
+	agentsOff bool
+	agentIn   *agentInput
+
 	assets      *assets.Cache
 	musicPath   string
 	musicPlayer *audio.Player
@@ -38,6 +43,7 @@ func New(title string, width, height int) *Game {
 		height: height,
 		scenes: map[string]*Scene{},
 		assets: assets.NewCache(),
+		input:  realInput{},
 	}
 }
 
@@ -73,8 +79,12 @@ func (g *Game) mustScene(name string) *Scene {
 	return s
 }
 
-// Sound plays a short effect, fire and forget.
+// Sound plays a short effect, fire and forget. Silent in headless
+// (agent) runs so bots and CI never touch the audio device.
 func (g *Game) Sound(path string) {
+	if g.headless {
+		return
+	}
 	g.assets.PlaySound(path)
 }
 
@@ -114,7 +124,15 @@ func (g *Game) Height() float64 { return float64(g.height) }
 // Run starts the game on the given scene and blocks until the window
 // closes or Quit is called. If the COLLIDER_RECORD environment variable
 // is set to a file path, the session is saved there as an animated GIF.
+// If COLLIDER_AGENT=mcp is set (and the game has not called
+// DisallowAgents), the game runs headless as an MCP server on stdio
+// instead of opening a window, so AI agents can play it.
 func (g *Game) Run(name string) {
+	if os.Getenv("COLLIDER_AGENT") == "mcp" && !g.agentsOff {
+		g.Headless(name)
+		g.serveMCP()
+		return
+	}
 	g.Go(name)
 	if path := os.Getenv("COLLIDER_RECORD"); path != "" {
 		g.rec = record.New(path, g.width, g.height)
@@ -126,6 +144,22 @@ func (g *Game) Run(name string) {
 	}
 	if g.rec != nil {
 		g.rec.Save()
+	}
+}
+
+// advance is one frame of game logic: scene switches, then the current
+// scene's update. Shared by the window loop and headless Step.
+func (g *Game) advance(dt float64) {
+	if g.next != nil {
+		g.current = g.next
+		g.next = nil
+		g.current.activate()
+		if !g.headless {
+			g.playMusic(g.current.musicPath)
+		}
+	}
+	if g.current != nil {
+		g.current.update(dt)
 	}
 }
 
@@ -156,16 +190,7 @@ func (r *runner) Update() error {
 	if g.quit {
 		return ebiten.Termination
 	}
-	if g.next != nil {
-		g.current = g.next
-		g.next = nil
-		g.current.activate()
-		g.playMusic(g.current.musicPath)
-	}
-	if g.current == nil {
-		return nil
-	}
-	g.current.update(1.0 / float64(ebiten.TPS()))
+	g.advance(1.0 / float64(ebiten.TPS()))
 	return nil
 }
 
