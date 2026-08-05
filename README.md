@@ -16,14 +16,24 @@ player.OnCollisionWith("enemy", func(e *engine.Object) {
 
 ![Zombie Night, one of the example games](examples/zombie-night/demo.gif)
 
-> **Status: core complete.** The API was designed first (README-driven
-> development), and milestones M1 through M5 are implemented: all six example
-> games below compile and run. If an example feels clumsy to write, the API
-> changes, not the example.
+**What's in the box:**
+
+- Collision-first core: enter-only collision events, tag rules, solid
+  resolution, gravity, spatial hash broad phase
+- Scenes, timers, sprite-sheet animations, text with custom TTF fonts,
+  sound and music (wav/ogg)
+- Fourteen example games across genres, from pong to a dungeon crawler,
+  each one a template you can start from
+- Shipping built in: embed assets into a single .exe or build for the
+  browser; one example is [live on itch.io](https://lucasantunesdealmeida.itch.io/ship)
+- Agent play built in: every game is headless-driveable and speaks MCP,
+  for bots, automated playtesting, and AI agents
+- A GIF recorder for demos, and generated placeholder assets so nothing
+  here needs hand-drawn art to run
 
 ---
 
-## Philosophy
+## Design principles
 
 1. **Fewest lines possible.** A complete game with menus, music, sprites and
    logic should fit in one small file. Every line of required boilerplate is a bug.
@@ -55,7 +65,7 @@ import engine "github.com/LucasAntunesdeAlmeida/collider"
 
 ## Hello, collision
 
-The smallest complete program: two objects, one event. Runs today:
+The smallest complete program: two objects, one event.
 
 ```bash
 go run ./examples/hello
@@ -102,9 +112,9 @@ func main() {
 
 ## Example games
 
-Five complete games, five genres, each chosen to stress a different part of the
-engine. All of them run today, with generated placeholder art and sound. Run
-each from its own folder so the asset paths resolve:
+Fourteen complete games, each exercising a different part of the engine
+and each a starting point for your own. Run any of them from its own
+folder so the asset paths resolve:
 
 ```bash
 cd examples/pong
