@@ -1,6 +1,7 @@
 package collider
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -112,6 +113,63 @@ func TestStepIsDeterministic(t *testing.T) {
 			t.Fatalf("run diverged at object %d: %+v vs %+v", i, a.Objects[i], b.Objects[i])
 		}
 	}
+}
+
+func TestAnyKeyByName(t *testing.T) {
+	// Every keyboard key a player can press resolves by name, not just
+	// the old 13-key list.
+	for _, name := range []string{"J", "K", "Numpad1", "ShiftLeft", "Comma", "ArrowLeft", "Left", "Esc"} {
+		if _, ok := keyNames[name]; !ok {
+			t.Fatalf("key name %q should resolve", name)
+		}
+	}
+}
+
+func TestControlsResolveAndError(t *testing.T) {
+	g, _ := newAgentGame()
+	g.Controls(map[string]Key{"go-right": Right, "fire": Space})
+
+	keys, err := g.resolveKeys([]any{"go-right", "fire", "J"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 3 || keys[0] != Right || keys[1] != Space {
+		t.Fatalf("resolved = %v", keys)
+	}
+
+	// Unknown names error with the control list, instead of being
+	// silently dropped.
+	_, err = g.resolveKeys([]any{"warp"})
+	if err == nil {
+		t.Fatal("unknown key should error")
+	}
+	if want := "fire, go-right"; !containsStr(err.Error(), want) {
+		t.Fatalf("error should list controls, got %q", err)
+	}
+}
+
+func TestAgentStateInObservation(t *testing.T) {
+	g, collected := newAgentGame()
+	g.AgentState(func() any {
+		return map[string]int{"collected": *collected}
+	})
+	g.Headless("play")
+
+	obs := g.Observe()
+	st, ok := obs.State.(map[string]int)
+	if !ok || st["collected"] != 0 {
+		t.Fatalf("state should be attached, got %#v", obs.State)
+	}
+	for range 120 {
+		obs = g.Step(Action{Keys: []Key{Right}})
+	}
+	if st := obs.State.(map[string]int); st["collected"] != 1 {
+		t.Fatalf("state should track the game, got %#v", obs.State)
+	}
+}
+
+func containsStr(s, sub string) bool {
+	return len(s) >= len(sub) && strings.Contains(s, sub)
 }
 
 func TestDisallowAgentsBlocksHeadless(t *testing.T) {

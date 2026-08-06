@@ -1,4 +1,4 @@
-# Collider
+﻿# Collider
 
 **The fastest way to a playable 2D game in Go. Every game you build can be
 played by humans and by AI agents, out of the box.**
@@ -169,10 +169,21 @@ motion, size and text (so HUDs and scores are readable):
   {"tag": "player", "x": 400, "y": 520, "w": 48, "h": 48},
   {"tag": "comet", "x": 312, "y": 180, "vy": 260, "w": 24, "h": 24},
   {"text": "SCORE 12", "x": 64, "y": 24, "w": 96, "h": 16}
-]}
+], "state": {"lives": 2, "wave": 3}}
 ```
 
-Three ways in:
+Three optional calls make any game, however complex, fully
+agent-playable and self-describing:
+
+- `g.Controls(map[string]engine.Key{"jump": engine.Space, ...})` names
+  your inputs; the MCP act tool accepts these names and lists them in
+  its own description, so agents discover how to play on connect.
+- `g.AgentState(func() any {...})` attaches game state (score, health,
+  phase) to every observation as the `state` field above.
+- `g.AgentDocs("...")` serves your game's rules to agents when they
+  connect (the MCP initialize instructions).
+
+Four ways in:
 
 - **Headless** (bots, CI): `g.Headless("play")` then a loop of
   `g.Step(engine.Action{Keys: ...})`, each step returning the next
@@ -180,7 +191,13 @@ Three ways in:
   game with a bot on every commit.
 - **MCP** (AI agents): run any Collider game with `COLLIDER_AGENT=mcp`
   and it serves MCP on stdio (`observe`, `act`, `reset` tools). Any MCP
-  client can connect and play your game.
+  client can connect and play your game; `act` accepts any keyboard key
+  by name, or the names you declared with `Controls`.
+- **Windowed MCP** (fight the AI): `COLLIDER_AGENT=mcp-window` opens
+  the normal window running in real time while serving the same MCP
+  tools. Agent input merges with the keyboard, so a person and an
+  agent can play the same game together, and COLLIDER_RECORD captures
+  the match.
 - **Autopilot** (watch it): `g.Autopilot(fn)` runs the game windowed
   while your agent function supplies the input each frame. Combine with
   the GIF recorder and an agent records your demo for you.
@@ -254,6 +271,9 @@ does not exist. That is the point.
 | `g.Quit()` | Exit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
 | `g.Headless(scene)` / `g.Step(action)` / `g.Observe()` | Agent play, headless and deterministic |
+| `g.Controls(map[string]Key)` | Name your inputs so agents can discover them |
+| `g.AgentState(fn)` | Attach game state to every observation |
+| `g.AgentDocs(text)` | Game rules served to agents on MCP connect |
 | `g.DisallowAgents()` | Opt out of agent play (on by default) |
 
 ### Scene

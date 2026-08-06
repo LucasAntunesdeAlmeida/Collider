@@ -2,6 +2,9 @@ package collider
 
 import (
 	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/LucasAntunesdeAlmeida/collider/internal/mcps"
 )
@@ -24,10 +27,12 @@ type Action struct {
 }
 
 // Observation is the structured view of the current frame: the scene
-// name and every object with its position, motion and label.
+// name, every object with its position, motion and label, and whatever
+// extra state the game attached with AgentState.
 type Observation struct {
 	Scene   string      `json:"scene"`
 	Objects []ObjectObs `json:"objects"`
+	State   any         `json:"state,omitempty"`
 }
 
 // ObjectObs describes one live object. Tag is the game's own label
@@ -50,6 +55,40 @@ type ObjectObs struct {
 // play is allowed by default.
 func (g *Game) DisallowAgents() {
 	g.agentsOff = true
+}
+
+// agentCmd is one MCP command crossing into the windowed game loop.
+type agentCmd struct {
+	action  Action
+	frames  int
+	observe bool   // observation only: keep the currently held input
+	reset   string // scene to restart first, "" = none
+	reply   chan Observation
+}
+
+// AgentDocs sets the game's agent-facing documentation: rules, goals,
+// coordinate conventions, anything an agent should know before playing.
+// It is returned as the MCP server's instructions on initialize.
+// Optional.
+func (g *Game) AgentDocs(docs string) {
+	g.agentDocs = docs
+}
+
+// Controls names this game's inputs for agents: action name to key,
+// like {"jump": engine.Space, "p2-attack": ebiten.KeyNumpad1}. The MCP
+// act tool then accepts these names and lists them in its description,
+// so any agent discovers how to play without reading the game's source.
+// Optional; raw key names always work.
+func (g *Game) Controls(controls map[string]Key) {
+	g.controls = controls
+}
+
+// AgentState attaches game-defined state to every observation: fn runs
+// once per observation and its result appears as the "state" field.
+// Use it for what object positions cannot express: score, health,
+// phase, whose turn it is. Optional.
+func (g *Game) AgentState(fn func() any) {
+	g.stateFn = fn
 }
 
 // Headless prepares the game to be driven by Step instead of Run: no
@@ -117,38 +156,117 @@ func (g *Game) Observe() Observation {
 			W: o.w, H: o.h, Solid: o.solid, Text: o.textStr,
 		})
 	}
+	if g.stateFn != nil {
+		obs.State = g.stateFn()
+	}
 	return obs
 }
 
-// serveMCP exposes the headless game as an MCP server on stdio:
-// observe, act (with a frames count, since agents think slower than
-// 60fps) and reset.
+// controlNames lists declared control names, sorted for stable output.
+func (g *Game) controlNames() []string {
+	names := make([]string, 0, len(g.controls))
+	for n := range g.controls {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// resolveKeys turns agent-supplied key names (declared control names or
+// keyboard key names) into keys, erroring on anything unknown so agents
+// get corrected instead of silently ignored.
+func (g *Game) resolveKeys(names []any) ([]Key, error) {
+	var keys []Key
+	for _, n := range names {
+		name, ok := n.(string)
+		if !ok {
+			return nil, fmt.Errorf("keys must be strings, got %v", n)
+		}
+		if k, ok := g.controls[name]; ok {
+			keys = append(keys, k)
+			continue
+		}
+		if k, ok := keyNames[name]; ok {
+			keys = append(keys, k)
+			continue
+		}
+		hint := `a keyboard key name like "J", "Numpad1" or "ArrowLeft"`
+		if len(g.controls) > 0 {
+			hint = "one of this game's controls [" +
+				strings.Join(g.controlNames(), ", ") + "] or " + hint
+		}
+		return nil, fmt.Errorf("unknown key %q: use %s", name, hint)
+	}
+	return keys, nil
+}
+
+// serveMCP exposes the game as an MCP server on stdio: observe, act
+// (with a frames count, since agents think slower than 60fps) and
+// reset. Headless, tools run in place and step the simulation; in
+// windowed mode (COLLIDER_AGENT=mcp-window) they cross to the game
+// loop through the command queue and real time keeps flowing.
 func (g *Game) serveMCP() {
+	windowed := g.agentReq != nil
 	obsJSON := func() string {
 		b, _ := json.Marshal(g.Observe())
 		return string(b)
 	}
-	mcps.Serve(g.title, []mcps.Tool{
+	// send runs a command on the game thread and waits for its
+	// observation; used only in windowed mode. If the window closes
+	// while a call is in flight, it answers with the final state
+	// instead of hanging the client.
+	send := func(cmd agentCmd) string {
+		cmd.reply = make(chan Observation, 1)
+		select {
+		case g.agentReq <- cmd:
+		case <-g.agentDone:
+			return obsJSON()
+		}
+		select {
+		case obs := <-cmd.reply:
+			b, _ := json.Marshal(obs)
+			return string(b)
+		case <-g.agentDone:
+			return obsJSON()
+		}
+	}
+
+	// The act tool describes this game's own controls when declared,
+	// so the server is self-documenting for any MCP client.
+	keysHelp := `any keyboard key name, e.g. "J", "Numpad1", "ShiftLeft" (aliases: Left, Right, Up, Down, Space, Enter, Esc)`
+	if len(g.controls) > 0 {
+		keysHelp = "this game's controls: [" + strings.Join(g.controlNames(), ", ") +
+			"] (raw keyboard key names also work)"
+	}
+	obsHelp := "Get the current game state: scene name and all objects (tag, position, velocity, size, text). The player object is usually tagged \"player\"."
+	if g.stateFn != nil {
+		obsHelp += " The \"state\" field carries game-specific state."
+	}
+
+	mcps.Serve(g.title, g.agentDocs, []mcps.Tool{
 		{
 			Name:        "observe",
-			Description: "Get the current game state: scene name and all objects (tag, position, velocity, size, text). The player object is usually tagged \"player\".",
+			Description: obsHelp,
 			Schema:      `{"type":"object","properties":{}}`,
 			Call: func(args map[string]any) (string, error) {
+				if windowed {
+					return send(agentCmd{observe: true, frames: 1}), nil
+				}
 				return obsJSON(), nil
 			},
 		},
 		{
 			Name:        "act",
-			Description: "Hold keys and/or click, then advance the game. keys: array from [Left,Right,Up,Down,Space,Enter,Esc,W,A,S,D,F,R]. frames: how many 1/60s frames to advance with this input held (default 10). click presses the mouse at x,y on the first frame.",
+			Description: "Hold keys and/or click, then advance the game. keys: " + keysHelp + ". frames: how many 1/60s frames to advance with this input held (default 10). click presses the mouse at x,y on the first frame.",
 			Schema:      `{"type":"object","properties":{"keys":{"type":"array","items":{"type":"string"}},"frames":{"type":"number"},"click":{"type":"boolean"},"x":{"type":"number"},"y":{"type":"number"}}}`,
 			Call: func(args map[string]any) (string, error) {
 				a := Action{}
 				if ks, ok := args["keys"].([]any); ok {
-					for _, kn := range ks {
-						if k, ok := keyNames[kn.(string)]; ok {
-							a.Keys = append(a.Keys, k)
-						}
+					keys, err := g.resolveKeys(ks)
+					if err != nil {
+						return "", err
 					}
+					a.Keys = keys
 				}
 				if x, ok := args["x"].(float64); ok {
 					a.MouseX = x
@@ -160,6 +278,12 @@ func (g *Game) serveMCP() {
 				frames := 10
 				if f, ok := args["frames"].(float64); ok && f >= 1 {
 					frames = int(f)
+				}
+				if windowed {
+					// Real time: the input is held for the frames,
+					// then the observation comes back. It stays held
+					// after, like a controller, until the next act.
+					return send(agentCmd{action: a, frames: frames}), nil
 				}
 				for range frames {
 					g.Step(a)
@@ -174,6 +298,9 @@ func (g *Game) serveMCP() {
 			Schema:      `{"type":"object","properties":{"scene":{"type":"string"}},"required":["scene"]}`,
 			Call: func(args map[string]any) (string, error) {
 				scene, _ := args["scene"].(string)
+				if windowed {
+					return send(agentCmd{reset: scene, observe: true, frames: 1}), nil
+				}
 				g.Restart(scene)
 				g.advance(0)
 				return obsJSON(), nil

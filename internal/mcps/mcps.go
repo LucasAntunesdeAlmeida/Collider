@@ -27,8 +27,9 @@ type request struct {
 }
 
 // Serve reads JSON-RPC requests from stdin and answers on stdout until
-// stdin closes. Blocks.
-func Serve(name string, tools []Tool) {
+// stdin closes. Blocks. instructions, when non-empty, is returned in
+// the initialize result so clients can show the game's own docs.
+func Serve(name, instructions string, tools []Tool) {
 	in := bufio.NewScanner(os.Stdin)
 	in.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
 	out := bufio.NewWriter(os.Stdout)
@@ -67,11 +68,15 @@ func Serve(name string, tools []Tool) {
 
 		switch req.Method {
 		case "initialize":
-			reply(req.ID, map[string]any{
+			result := map[string]any{
 				"protocolVersion": "2024-11-05",
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 				"serverInfo":      map[string]any{"name": name, "version": "0.1.0"},
-			})
+			}
+			if instructions != "" {
+				result["instructions"] = instructions
+			}
+			reply(req.ID, result)
 
 		case "tools/list":
 			list := []map[string]any{}

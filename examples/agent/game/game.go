@@ -27,6 +27,12 @@ func New() *engine.Game {
 	g := engine.New("Gem Rush", 800, 600)
 
 	play := g.Scene("play")
+
+	// Self-describing agent play: the MCP act tool lists these control
+	// names, and observations carry the game state alongside objects.
+	g.Controls(map[string]engine.Key{
+		"up": engine.W, "down": engine.S, "left": engine.A, "right": engine.D,
+	})
 	play.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
 	play.Add(engine.Text("AGENT AT PLAY  NO HUMAN INPUT").At(400, 580).
 		Font(font).TextSize(10).Visual())
@@ -46,6 +52,12 @@ func New() *engine.Game {
 	}
 
 	left := TimeLimit
+	g.AgentState(func() any {
+		return map[string]any{
+			"gemsLeft": play.Count("gem"),
+			"timeLeft": math.Round(left*10) / 10,
+		}
+	})
 	player.OnUpdate(func(dt float64) {
 		moving := false
 		if g.Key(engine.W) {

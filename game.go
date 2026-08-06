@@ -27,6 +27,18 @@ type Game struct {
 	agentsOff bool
 	agentIn   *agentInput
 	pilot     func(Observation) Action
+	controls  map[string]Key
+	stateFn   func() any
+	agentDocs string
+
+	// Windowed MCP: commands cross from the stdio goroutine to the
+	// game loop through agentReq, so all game state stays on one
+	// thread; agentDone closes when the window does, so in-flight MCP
+	// calls return instead of deadlocking.
+	agentReq  chan agentCmd
+	agentDone chan struct{}
+	agentCur  *agentCmd
+	agentHold Action
 
 	assets      *assets.Cache
 	musicPath   string
@@ -125,14 +137,30 @@ func (g *Game) Height() float64 { return float64(g.height) }
 // Run starts the game on the given scene and blocks until the window
 // closes or Quit is called. If the COLLIDER_RECORD environment variable
 // is set to a file path, the session is saved there as an animated GIF.
-// If COLLIDER_AGENT=mcp is set (and the game has not called
-// DisallowAgents), the game runs headless as an MCP server on stdio
-// instead of opening a window, so AI agents can play it.
+//
+// Agent play (unless the game called DisallowAgents):
+//   - COLLIDER_AGENT=mcp runs headless as an MCP server on stdio; act
+//     steps the simulation deterministically.
+//   - COLLIDER_AGENT=mcp-window opens the window and runs in real time
+//     while serving the same MCP tools: agents and the person at the
+//     keyboard play together, and the session is watchable (and
+//     recordable with COLLIDER_RECORD).
 func (g *Game) Run(name string) {
-	if os.Getenv("COLLIDER_AGENT") == "mcp" && !g.agentsOff {
-		g.Headless(name)
-		g.serveMCP()
-		return
+	switch os.Getenv("COLLIDER_AGENT") {
+	case "mcp":
+		if !g.agentsOff {
+			g.Headless(name)
+			g.serveMCP()
+			return
+		}
+	case "mcp-window":
+		if !g.agentsOff {
+			g.agentIn = &agentInput{keys: map[Key]bool{}}
+			g.input = &mixedInput{agent: g.agentIn}
+			g.agentReq = make(chan agentCmd)
+			g.agentDone = make(chan struct{})
+			go g.serveMCP()
+		}
 	}
 	g.Go(name)
 	if path := os.Getenv("COLLIDER_RECORD"); path != "" {
@@ -142,6 +170,9 @@ func (g *Game) Run(name string) {
 	ebiten.SetWindowSize(g.width, g.height)
 	if err := ebiten.RunGame(&runner{g}); err != nil {
 		panic(err)
+	}
+	if g.agentDone != nil {
+		close(g.agentDone)
 	}
 	if g.rec != nil {
 		g.rec.Save()
@@ -194,11 +225,42 @@ func (r *runner) Update() error {
 	if g.pilot != nil && g.current != nil {
 		g.injectAction(g.pilot(g.Observe()))
 	}
+	if g.agentReq != nil {
+		g.serviceAgent()
+	}
 	g.advance(1.0 / float64(ebiten.TPS()))
+	if g.agentReq != nil && g.agentCur != nil {
+		g.agentCur.frames--
+		if g.agentCur.frames <= 0 {
+			g.agentCur.reply <- g.Observe()
+			g.agentCur = nil
+		}
+	}
 	if g.agentIn != nil {
 		g.agentIn.click = false
 	}
 	return nil
+}
+
+// serviceAgent runs the windowed-MCP command queue on the game thread:
+// dequeue at most one pending command, apply it, and keep the agent's
+// last held input pressed between commands (its virtual controller).
+func (g *Game) serviceAgent() {
+	if g.agentCur == nil {
+		select {
+		case cmd := <-g.agentReq:
+			g.agentCur = &cmd
+			if cmd.reset != "" {
+				g.Restart(cmd.reset)
+			}
+			if !cmd.observe {
+				g.agentHold = cmd.action
+			}
+		default:
+		}
+	}
+	g.injectAction(g.agentHold)
+	g.agentHold.Click = false // click fires on one frame only
 }
 
 func (r *runner) Draw(screen *ebiten.Image) {

@@ -25,13 +25,25 @@ const (
 	R     = ebiten.KeyR
 )
 
-// keyNames maps the exported key constants to the names agents use in
-// MCP calls and observations.
-var keyNames = map[string]Key{
-	"Left": Left, "Right": Right, "Up": Up, "Down": Down,
-	"Space": Space, "Enter": Enter, "Esc": Esc,
-	"W": W, "A": A, "S": S, "D": D, "F": F, "R": R,
-}
+// keyNames maps every keyboard key's name to its key, so agents can
+// press anything a player can. Names are ebiten's ("J", "Numpad1",
+// "ShiftLeft", "ArrowLeft"), plus short aliases for the most common
+// keys.
+var keyNames = func() map[string]Key {
+	m := map[string]Key{}
+	for k := Key(0); k <= ebiten.KeyMax; k++ {
+		if name := k.String(); name != "" {
+			m[name] = k
+		}
+	}
+	for alias, k := range map[string]Key{
+		"Left": Left, "Right": Right, "Up": Up, "Down": Down,
+		"Space": Space, "Enter": Enter, "Esc": Esc,
+	} {
+		m[alias] = k
+	}
+	return m
+}()
 
 // inputSource is where a Game reads its input from: the real keyboard
 // and mouse in normal play, injected state in agent/headless play.
@@ -60,6 +72,29 @@ type agentInput struct {
 	keys  map[Key]bool
 	x, y  float64
 	click bool
+}
+
+// mixedInput merges the real keyboard and mouse with agent-injected
+// input, for windowed MCP play: the person at the keyboard and the
+// agent hold a controller each, wired to the same game.
+type mixedInput struct {
+	agent *agentInput
+}
+
+func (m *mixedInput) keyPressed(k Key) bool {
+	return m.agent.keys[k] || ebiten.IsKeyPressed(k)
+}
+
+func (m *mixedInput) cursor() (float64, float64) {
+	if m.agent.click {
+		return m.agent.x, m.agent.y
+	}
+	x, y := ebiten.CursorPosition()
+	return float64(x), float64(y)
+}
+
+func (m *mixedInput) clickJustPressed() bool {
+	return m.agent.click || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 }
 
 func (a *agentInput) keyPressed(k Key) bool      { return a.keys[k] }

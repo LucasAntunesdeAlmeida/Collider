@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 You are reading the repo of Collider, a code-first 2D game engine for Go
 whose games are playable by AI agents out of the box. That includes you:
@@ -74,13 +74,21 @@ Decorative scenery is filtered out for you.
 
 **Over MCP** (any client, or you via a subprocess): run a game with the
 `COLLIDER_AGENT=mcp` env var and its stdio becomes an MCP server with
-three tools:
+three tools. With `COLLIDER_AGENT=mcp-window` the same server runs
+while the game plays windowed in real time: agent keys merge with the
+human keyboard, `act`'s input stays held between calls like a
+controller, and games that set `AgentDocs` return their rules in the
+initialize instructions.
 
-- `observe` returns the current observation.
-- `act` holds input and advances time: `keys` from `[Left, Right, Up,
-  Down, Space, Enter, Esc, W, A, S, D, F, R]`, optional `click` at
-  `x`, `y`, and `frames` for how many 1/60s frames to hold (default 10).
-  Returns the resulting observation.
+- `observe` returns the current observation (plus a `state` field when
+  the game attached one with `AgentState`).
+- `act` holds input and advances time: `keys` is any keyboard key by
+  name (`"J"`, `"Numpad1"`, `"ShiftLeft"`; aliases `Left, Right, Up,
+  Down, Space, Enter, Esc`), or, when the game declared
+  `g.Controls(...)`, the control names the tool description lists.
+  Optional `click` at `x`, `y`, and `frames` for how many 1/60s frames
+  to hold (default 10). Returns the resulting observation; unknown key
+  names return an error naming the valid controls.
 - `reset` restarts a scene by name.
 
 The protocol is newline-delimited JSON-RPC 2.0 (`initialize`,
