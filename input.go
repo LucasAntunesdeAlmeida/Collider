@@ -1,6 +1,8 @@
 package collider
 
 import (
+	"slices"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
@@ -53,18 +55,93 @@ type inputSource interface {
 	clickJustPressed() bool
 }
 
+// The device reads realInput makes, kept as variables so tests can
+// stand in for hardware: Ebitengine reports real devices only from
+// inside a running game loop, and a test has no window.
+var (
+	cursorPosition            = ebiten.CursorPosition
+	appendTouchIDs            = ebiten.AppendTouchIDs
+	touchPosition             = ebiten.TouchPosition
+	appendJustPressedTouchIDs = inpututil.AppendJustPressedTouchIDs
+	mouseClickJustPressed     = func() bool {
+		return inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	}
+)
+
 // realInput reads the actual devices through Ebitengine.
-type realInput struct{}
+//
+// A finger is a mouse here. Ebitengine keeps touches on their own
+// channel and never turns one into a click (in a browser it cancels
+// the compatibility mouse events a tap would otherwise produce), so
+// without this a phone or tablet could not press a single button.
+type realInput struct {
+	// Reused across frames so reading the touch state allocates
+	// nothing in the main loop.
+	touches, justPressed []ebiten.TouchID
 
-func (realInput) keyPressed(k Key) bool { return ebiten.IsKeyPressed(k) }
+	// The finger answering as the cursor. Several fingers can be on
+	// the glass at once but only one can be the pointer, and the
+	// engine reports them in no particular order, so the choice has to
+	// be remembered rather than read off the list.
+	pointer    ebiten.TouchID
+	hasPointer bool
 
-func (realInput) cursor() (float64, float64) {
-	x, y := ebiten.CursorPosition()
-	return float64(x), float64(y)
+	// Where the last finger was, and whether the cursor is still
+	// answering for it rather than for the mouse.
+	touchX, touchY         float64
+	fromTouch              bool
+	lastMouseX, lastMouseY int
 }
 
-func (realInput) clickJustPressed() bool {
-	return inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+func (*realInput) keyPressed(k Key) bool { return ebiten.IsKeyPressed(k) }
+
+// pointerTouch reports the finger acting as the cursor, if any. A
+// finger that just landed takes the role, so the position read on a
+// click frame belongs to the finger that caused the click; otherwise
+// the finger already holding it keeps it until it lifts.
+func (r *realInput) pointerTouch() (ebiten.TouchID, bool) {
+	r.touches = appendTouchIDs(r.touches[:0])
+	if len(r.touches) == 0 {
+		r.hasPointer = false
+		return 0, false
+	}
+	r.justPressed = appendJustPressedTouchIDs(r.justPressed[:0])
+	switch {
+	case len(r.justPressed) > 0:
+		r.pointer = r.justPressed[0]
+	case !r.hasPointer || !slices.Contains(r.touches, r.pointer):
+		r.pointer = r.touches[0]
+	}
+	r.hasPointer = true
+	return r.pointer, true
+}
+
+func (r *realInput) cursor() (float64, float64) {
+	mx, my := cursorPosition()
+	if id, ok := r.pointerTouch(); ok {
+		x, y := touchPosition(id)
+		r.touchX, r.touchY, r.fromTouch = float64(x), float64(y), true
+		r.lastMouseX, r.lastMouseY = mx, my
+		return r.touchX, r.touchY
+	}
+	// A finger that lifts leaves the cursor where it was. A touch
+	// device has no mouse position worth reading, so snapping back to
+	// it would fling whatever follows the cursor into a corner. A real
+	// mouse move takes the cursor back.
+	if r.fromTouch && mx == r.lastMouseX && my == r.lastMouseY {
+		return r.touchX, r.touchY
+	}
+	r.fromTouch = false
+	r.lastMouseX, r.lastMouseY = mx, my
+	return float64(mx), float64(my)
+}
+
+func (r *realInput) clickJustPressed() bool {
+	if mouseClickJustPressed() {
+		return true
+	}
+	r.justPressed = appendJustPressedTouchIDs(r.justPressed[:0])
+	return len(r.justPressed) > 0
 }
 
 // agentInput is fed by Step calls instead of hardware.
@@ -79,22 +156,22 @@ type agentInput struct {
 // agent hold a controller each, wired to the same game.
 type mixedInput struct {
 	agent *agentInput
+	real  realInput
 }
 
 func (m *mixedInput) keyPressed(k Key) bool {
-	return m.agent.keys[k] || ebiten.IsKeyPressed(k)
+	return m.agent.keys[k] || m.real.keyPressed(k)
 }
 
 func (m *mixedInput) cursor() (float64, float64) {
 	if m.agent.click {
 		return m.agent.x, m.agent.y
 	}
-	x, y := ebiten.CursorPosition()
-	return float64(x), float64(y)
+	return m.real.cursor()
 }
 
 func (m *mixedInput) clickJustPressed() bool {
-	return m.agent.click || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	return m.agent.click || m.real.clickJustPressed()
 }
 
 func (a *agentInput) keyPressed(k Key) bool      { return a.keys[k] }

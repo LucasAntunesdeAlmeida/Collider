@@ -266,7 +266,7 @@ does not exist. That is the point.
 | `g.Restart(name)` | Switch scenes, resetting it to its initial state |
 | `g.Run(name)` | Start the loop on a scene (blocks) |
 | `g.Key(k) bool` | Is this key held? |
-| `g.Mouse() (x, y)` | Cursor position |
+| `g.Mouse() (x, y)` | Cursor position (a finger on a touch screen counts) |
 | `g.Sound(path)` | Fire-and-forget sound effect |
 | `g.Quit()` | Exit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
@@ -343,4 +343,8 @@ does not exist. That is the point.
    scene first runs are restored (even if destroyed); objects and timers
    spawned during play are dropped. Variables captured in your closures are
    yours to reset.
+6. **A tap is a click.** `g.Mouse()` and every `OnClick` read touch as well
+   as the mouse, so a game built for a mouse works on a phone without a
+   second input path. A lifted finger leaves the cursor where it was, so
+   anything following the cursor stays put until the next touch.
 

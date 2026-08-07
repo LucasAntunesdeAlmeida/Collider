@@ -56,7 +56,7 @@ func New(title string, width, height int) *Game {
 		height: height,
 		scenes: map[string]*Scene{},
 		assets: assets.NewCache(),
-		input:  realInput{},
+		input:  &realInput{},
 	}
 }
 
