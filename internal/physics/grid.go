@@ -10,48 +10,112 @@ import (
 // never correctness.
 const cellSize = 128.0
 
-// CandidatePairs is the broad phase: it returns index pairs of boxes
-// that share at least one grid cell and so might overlap. Callers run
-// the exact Overlaps test on each candidate. Pairs are deduplicated,
-// ordered (low index first) and sorted, so iteration is deterministic.
-func CandidatePairs(boxes []Box) [][2]int {
-	cells := map[[2]int][]int{}
+// Cell coordinates are packed into sortable integers: 21 bits per axis,
+// biased so negative cells sort before positive ones, and 22 bits for
+// the box index. Boxes beyond ±2^20 cells (about ±134 million pixels)
+// are clamped to the edge cells, which only makes them extra
+// candidates: the exact test still decides.
+const (
+	cellBits  = 21
+	cellBias  = 1 << (cellBits - 1)
+	cellMax   = 1<<cellBits - 1
+	indexBits = 64 - 2*cellBits
+	indexMask = 1<<indexBits - 1
+	// MaxBoxes is how many boxes one Pairs call can index.
+	MaxBoxes = 1 << indexBits
+)
+
+// span is the inclusive cell range a box covers.
+type span struct{ x0, y0, x1, y1 int }
+
+// Grid is the broad phase: a uniform grid that turns boxes into the
+// index pairs that might overlap. It keeps its buffers between calls,
+// so a scene that calls it every frame allocates nothing once warm.
+// The zero value is ready to use; a Grid is not safe for concurrent
+// use.
+type Grid struct {
+	spans   []span
+	entries []uint64 // row-major cell key << indexBits | box index
+	pairs   []uint64 // low index << 32 | high index
+	out     [][2]int
+}
+
+func cellOf(v float64) int {
+	c := math.Floor(v / cellSize)
+	switch {
+	case c < -cellBias || c != c:
+		return 0
+	case c > cellMax-cellBias:
+		return cellMax
+	}
+	return int(c) + cellBias
+}
+
+// Pairs returns the index pairs of boxes that share at least one grid
+// cell and so might overlap; callers run the exact Overlaps test on
+// each. Every pair appears once, low index first, sorted by (low,
+// high), so iteration is deterministic. The result is owned by the
+// Grid and valid until the next call.
+func (g *Grid) Pairs(boxes []Box) [][2]int {
+	if len(boxes) > MaxBoxes {
+		panic("physics: too many boxes for one grid")
+	}
+	g.spans = g.spans[:0]
+	g.entries = g.entries[:0]
 	for i, b := range boxes {
-		x0 := int(math.Floor((b.X - b.W/2) / cellSize))
-		x1 := int(math.Floor((b.X + b.W/2) / cellSize))
-		y0 := int(math.Floor((b.Y - b.H/2) / cellSize))
-		y1 := int(math.Floor((b.Y + b.H/2) / cellSize))
-		for cx := x0; cx <= x1; cx++ {
-			for cy := y0; cy <= y1; cy++ {
-				key := [2]int{cx, cy}
-				cells[key] = append(cells[key], i)
+		s := span{
+			x0: cellOf(b.X - b.W/2), x1: cellOf(b.X + b.W/2),
+			y0: cellOf(b.Y - b.H/2), y1: cellOf(b.Y + b.H/2),
+		}
+		g.spans = append(g.spans, s)
+		for cy := s.y0; cy <= s.y1; cy++ {
+			for cx := s.x0; cx <= s.x1; cx++ {
+				key := uint64(cy)<<cellBits | uint64(cx)
+				g.entries = append(g.entries, key<<indexBits|uint64(i))
 			}
 		}
 	}
+	// One sort groups the boxes by cell, each cell's boxes by index.
+	slices.Sort(g.entries)
 
-	seen := map[[2]int]struct{}{}
-	var out [][2]int
-	for _, members := range cells {
-		for i := range members {
-			for j := i + 1; j < len(members); j++ {
-				a, b := members[i], members[j]
-				if a > b {
-					a, b = b, a
-				}
-				p := [2]int{a, b}
-				if _, dup := seen[p]; dup {
+	g.pairs = g.pairs[:0]
+	for start := 0; start < len(g.entries); {
+		key := g.entries[start] >> indexBits
+		end := start + 1
+		for end < len(g.entries) && g.entries[end]>>indexBits == key {
+			end++
+		}
+		cx, cy := int(key&cellMax), int(key>>cellBits)
+		for i := start; i < end; i++ {
+			a := int(g.entries[i] & indexMask)
+			sa := g.spans[a]
+			for j := i + 1; j < end; j++ {
+				b := int(g.entries[j] & indexMask)
+				sb := g.spans[b]
+				// Two boxes sharing several cells meet in each of
+				// them; only the first shared cell (the top-left of
+				// the overlap of their ranges) reports the pair, so
+				// no dedupe set is needed.
+				if max(sa.x0, sb.x0) != cx || max(sa.y0, sb.y0) != cy {
 					continue
 				}
-				seen[p] = struct{}{}
-				out = append(out, p)
+				g.pairs = append(g.pairs, uint64(a)<<32|uint64(b))
 			}
 		}
+		start = end
 	}
-	slices.SortFunc(out, func(a, b [2]int) int {
-		if a[0] != b[0] {
-			return a[0] - b[0]
-		}
-		return a[1] - b[1]
-	})
-	return out
+	slices.Sort(g.pairs)
+
+	g.out = g.out[:0]
+	for _, p := range g.pairs {
+		g.out = append(g.out, [2]int{int(p >> 32), int(p & math.MaxUint32)})
+	}
+	return g.out
+}
+
+// CandidatePairs is Pairs on a throwaway Grid, returning a slice the
+// caller owns. Scenes keep a Grid instead, so the buffers are reused.
+func CandidatePairs(boxes []Box) [][2]int {
+	var g Grid
+	return slices.Clone(g.Pairs(boxes))
 }

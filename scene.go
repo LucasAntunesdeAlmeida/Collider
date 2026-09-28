@@ -36,8 +36,19 @@ type Scene struct {
 	rules    []collisionRule
 
 	// touching tracks currently overlapping pairs so collision events
-	// fire on enter, not on every frame of overlap.
-	touching map[pair]struct{}
+	// fire on enter, not on every frame of overlap. touchNext is the
+	// map being filled this frame; the two swap, so no frame allocates
+	// a fresh one.
+	touching  map[pair]struct{}
+	touchNext map[pair]struct{}
+
+	// Per-frame scratch for collide and resolveSolids, reused so a
+	// steady scene allocates nothing: the broad-phase grid, the scene
+	// index of each collidable box, the boxes, and the solid objects.
+	grid     physics.Grid
+	collIdx  []int
+	collBox  []physics.Box
+	solidBuf []*Object
 
 	// order is the draw list, rebuilt every frame and reused so drawing
 	// allocates nothing.
@@ -67,11 +78,12 @@ type timer struct {
 
 func newScene(g *Game, name string) *Scene {
 	return &Scene{
-		game:     g,
-		name:     name,
-		camX:     g.Width() / 2,
-		camY:     g.Height() / 2,
-		touching: map[pair]struct{}{},
+		game:      g,
+		name:      name,
+		camX:      g.Width() / 2,
+		camY:      g.Height() / 2,
+		touching:  map[pair]struct{}{},
+		touchNext: map[pair]struct{}{},
 	}
 }
 
@@ -307,20 +319,21 @@ func (s *Scene) clicks() {
 // collide detects overlaps (spatial hash broad phase, exact AABB narrow
 // phase) and fires enter events: object callbacks and scene tag rules.
 func (s *Scene) collide() {
-	idx := make([]int, 0, len(s.objects))
-	boxes := make([]physics.Box, 0, len(s.objects))
+	s.collIdx = s.collIdx[:0]
+	s.collBox = s.collBox[:0]
 	for i, o := range s.objects {
 		if o.dead || o.visual {
 			continue
 		}
-		idx = append(idx, i)
-		boxes = append(boxes, o.box())
+		s.collIdx = append(s.collIdx, i)
+		s.collBox = append(s.collBox, o.box())
 	}
 
-	now := map[pair]struct{}{}
-	for _, c := range physics.CandidatePairs(boxes) {
-		a := s.objects[idx[c[0]]]
-		b := s.objects[idx[c[1]]]
+	now := s.touchNext
+	clear(now)
+	for _, c := range s.grid.Pairs(s.collBox) {
+		a := s.objects[s.collIdx[c[0]]]
+		b := s.objects[s.collIdx[c[1]]]
 		if a.dead || b.dead {
 			continue
 		}
@@ -335,7 +348,7 @@ func (s *Scene) collide() {
 			s.fireRules(a, b)
 		}
 	}
-	s.touching = now
+	s.touching, s.touchNext = now, s.touching
 }
 
 func (s *Scene) fireRules(a, b *Object) {
@@ -351,12 +364,13 @@ func (s *Scene) fireRules(a, b *Object) {
 // resolveSolids pushes non-solid objects out of solid ones along the
 // axis of least penetration, and maintains Grounded for gravity objects.
 func (s *Scene) resolveSolids() {
-	var solids []*Object
+	solids := s.solidBuf[:0]
 	for _, o := range s.objects {
 		if !o.dead && o.solid {
 			solids = append(solids, o)
 		}
 	}
+
 	for _, o := range s.objects {
 		if o.dead || o.solid || o.visual {
 			continue
@@ -380,6 +394,8 @@ func (s *Scene) resolveSolids() {
 			}
 		}
 	}
+	clear(solids) // keep the buffer, not the objects
+	s.solidBuf = solids[:0]
 }
 
 // flush removes destroyed objects at the end of the frame, so Destroy
@@ -416,10 +432,38 @@ func (s *Scene) drawOrder() []*Object {
 }
 
 // draw renders every live object bottom to top: world objects shifted
-// by the camera, Fixed ones straight to the screen.
+// by the camera, Fixed ones straight to the screen. Objects entirely
+// outside the screen are skipped.
 func (s *Scene) draw(screen *ebiten.Image) {
+	vx, vy := s.view()
+	w, h := s.game.Width(), s.game.Height()
 	for _, o := range s.drawOrder() {
-		vx, vy := s.origin(o)
-		o.draw(screen, vx, vy)
+		ox, oy := vx, vy
+		if o.fixed {
+			ox, oy = 0, 0
+		}
+		if !o.onScreen(ox, oy, w, h) {
+			continue
+		}
+		o.draw(screen, ox, oy)
 	}
+}
+
+// onScreen reports whether the object's drawing may touch the w x h
+// screen whose top-left is the view origin (ox, oy). The bound is
+// conservative: a rotated object counts with the circle around its
+// box, and text and buttons, which can draw past their box, are always
+// drawn.
+func (o *Object) onScreen(ox, oy, w, h float64) bool {
+	if o.isText || o.isButton {
+		return true
+	}
+	hw, hh := o.w/2, o.h/2
+	if o.rotation != 0 {
+		r := math.Hypot(hw, hh)
+		hw, hh = r, r
+	}
+	const margin = 1 // rounding and filtering at the edges
+	x, y := o.X-ox, o.Y-oy
+	return x+hw+margin >= 0 && x-hw-margin <= w && y+hh+margin >= 0 && y-hh-margin <= h
 }

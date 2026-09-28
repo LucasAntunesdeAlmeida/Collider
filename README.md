@@ -246,6 +246,18 @@ the [ship example](examples/ship/) has it all wired up, and it is
 actually published: **[play Ship in your browser on
 itch.io](https://lucasantunesdealmeida.itch.io/ship)**.
 
+## Performance
+
+A frame's work scales with what is on screen and what actually
+touches, not with bookkeeping. The engine's own benchmark
+(`go test -bench Scene -benchmem`) runs a survivor-style scene of 1000
+live objects: 400 enemies crowding the hero, 150 projectiles, 300
+visual gems and 150 props and walls, with the camera following. On a
+Ryzen 7 5800H one frame of logic (motion, broad phase, collision
+events, solids) takes about **0.75 ms with zero allocations**, and
+preparing the draw about 0.26 ms, since objects outside the view are
+skipped. That leaves nearly all of a 60 fps frame to your game.
+
 ## Record a GIF of your game
 
 Every Collider game can record itself, no tooling needed. Set the
