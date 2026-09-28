@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -309,6 +309,7 @@ does not exist. That is the point.
 | `.WithGravity()` | Affected by the scene's gravity |
 | `.Visual()` | Decoration: drawn, never collides |
 | `.Fixed()` | Pinned to the screen: ignores the camera, never collides (HUD) |
+| `.Layer(n)` | Draw order: lower layers first, insertion order within a layer; clicks hit the top |
 | `.Size(w, h)` | Override collider size |
 | `.Animation(name, strip, frames, fps)` | Define a sprite-sheet animation |
 | `.Font(path)` / `.TextSize(px)` / `.TextColor(c)` | Text styling (custom TTF, size, color) |

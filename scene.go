@@ -38,6 +38,10 @@ type Scene struct {
 	// touching tracks currently overlapping pairs so collision events
 	// fire on enter, not on every frame of overlap.
 	touching map[pair]struct{}
+
+	// order is the draw list, rebuilt every frame and reused so drawing
+	// allocates nothing.
+	order []*Object
 }
 
 type pair [2]*Object
@@ -280,8 +284,8 @@ func (s *Scene) clicks() {
 	for _, fn := range slices.Clone(s.onClick) {
 		fn(x+vx, y+vy)
 	}
-	for _, o := range slices.Backward(s.objects) {
-		if o.dead || len(o.onClick) == 0 {
+	for _, o := range slices.Backward(s.drawOrder()) {
+		if len(o.onClick) == 0 {
 			continue
 		}
 		ox, oy := s.origin(o)
@@ -388,13 +392,26 @@ func (s *Scene) flush() {
 	s.objects = alive
 }
 
-// draw renders every live object in scene order: world objects shifted
+// drawOrder lists the live objects bottom to top: by layer, and in
+// scene order within a layer. The slice is reused between calls.
+func (s *Scene) drawOrder() []*Object {
+	s.order = s.order[:0]
+	for _, o := range s.objects {
+		if !o.dead {
+			s.order = append(s.order, o)
+		}
+	}
+	byLayer := func(a, b *Object) int { return a.layer - b.layer }
+	if !slices.IsSortedFunc(s.order, byLayer) {
+		slices.SortStableFunc(s.order, byLayer)
+	}
+	return s.order
+}
+
+// draw renders every live object bottom to top: world objects shifted
 // by the camera, Fixed ones straight to the screen.
 func (s *Scene) draw(screen *ebiten.Image) {
-	for _, o := range s.objects {
-		if o.dead {
-			continue
-		}
+	for _, o := range s.drawOrder() {
 		vx, vy := s.origin(o)
 		o.draw(screen, vx, vy)
 	}

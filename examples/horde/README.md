@@ -29,3 +29,11 @@ play.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Fixed()) // backdrop t
   scroll.
 - Clicks follow the camera too: world objects are hit where they
   appear, and `Scene.OnClick` receives world coordinates.
+
+## Layers: draw order that survives spawning
+
+Chasers spawn all night long, after the hero and the HUD exist. By
+scene order alone they would draw over both. `Object.Layer(n)` fixes
+the order once: scenery 0, chasers 1, hero 2, HUD 3. Lower layers draw
+first, objects on one layer keep the order they were added in, and
+clicks go to whatever is drawn on top.

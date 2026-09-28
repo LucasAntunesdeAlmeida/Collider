@@ -4,7 +4,9 @@
 //
 // This example proves the camera: the scene follows the hero across the
 // world with Camera, while the HUD and the ground color stay pinned to
-// the screen with Fixed.
+// the screen with Fixed. Layers keep the drawing readable: scenery at
+// the bottom, then chasers, the hero, and the HUD on top, whatever
+// order they spawn in.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -22,6 +24,14 @@ const (
 	field = 2000.0 // the world spans -field..field on both axes
 )
 
+// Draw layers, bottom to top.
+const (
+	layerScenery = iota
+	layerChasers
+	layerHero
+	layerHUD
+)
+
 func main() {
 	g := engine.New("Horde", 800, 600)
 
@@ -29,18 +39,18 @@ func main() {
 	play := g.Scene("play")
 	play.Music("audios/theme.wav")
 	// The ground is pinned to the screen; the world scrolls over it.
-	play.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Fixed())
+	play.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Fixed().Layer(layerScenery))
 	scenery := []string{"sprites/tuft.png", "sprites/stone.png", "sprites/flower.png"}
 	for range 500 {
 		x, y := (rand.Float64()*2-1)*field, (rand.Float64()*2-1)*field
 		play.Add(engine.Sprite(scenery[rand.IntN(len(scenery))]).At(x, y).Visual())
 	}
 
-	hero := play.Add(engine.Rect(36, 48, nil).At(0, 0).Tag("player").
+	hero := play.Add(engine.Rect(36, 48, nil).At(0, 0).Tag("player").Layer(layerHero).
 		Animation("walk", "sprites/hero.png", 2, 8).
 		Animation("idle", "sprites/idle.png", 1, 1))
 	hero.Play("idle")
-	clock := play.Add(engine.Text("0 S").At(400, 30).Font(font).TextSize(16).Fixed())
+	clock := play.Add(engine.Text("0 S").At(400, 30).Font(font).TextSize(16).Fixed().Layer(layerHUD))
 
 	survived := 0.0
 	hero.OnUpdate(func(dt float64) {
@@ -75,7 +85,7 @@ func main() {
 	play.Every(0.6, func() {
 		a := rand.Float64() * 2 * math.Pi
 		c := play.Add(engine.Rect(36, 48, nil).
-			At(hero.X+math.Cos(a)*560, hero.Y+math.Sin(a)*560).Tag("chaser").
+			At(hero.X+math.Cos(a)*560, hero.Y+math.Sin(a)*560).Tag("chaser").Layer(layerChasers).
 			Animation("walk", "sprites/chaser.png", 2, 5))
 		c.Play("walk")
 		speed := 70 + rand.Float64()*60

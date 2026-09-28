@@ -38,6 +38,7 @@ type Object struct {
 	isButton  bool
 	visual    bool
 	fixed     bool
+	layer     int
 	textStr   string
 	fontPath  string
 	textSize  float64
@@ -68,6 +69,7 @@ type objState struct {
 	img          *ebiten.Image
 	life         float64
 	hasLife      bool
+	layer        int
 }
 
 // Sprite creates an object from an image file. The collider defaults to
@@ -118,6 +120,15 @@ func (o *Object) WithGravity() *Object {
 func (o *Object) Size(w, h float64) *Object {
 	o.w, o.h = w, h
 	o.sizeSet = true
+	return o
+}
+
+// Layer sets the draw order: lower layers draw first, higher ones on
+// top, and objects on the same layer keep the order they were added
+// in. Clicks go to the topmost object. The default layer is 0; any int
+// works, negative included. Chainable, and callable any time.
+func (o *Object) Layer(n int) *Object {
+	o.layer = n
 	return o
 }
 
@@ -256,6 +267,7 @@ func (o *Object) saveState() {
 		img:        o.img,
 		life:       o.life,
 		hasLife:    o.hasLife,
+		layer:      o.layer,
 	}
 }
 
@@ -272,6 +284,7 @@ func (o *Object) restoreState() {
 	o.img = s.img
 	o.life = s.life
 	o.hasLife = s.hasLife
+	o.layer = s.layer
 	o.dead = false
 	o.grounded = false
 }
