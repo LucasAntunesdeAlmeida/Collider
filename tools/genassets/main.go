@@ -31,7 +31,7 @@ var fontsrc embed.FS
 // fontUsers get a copy of the pixel font and its license.
 var fontUsers = []string{
 	"agent", "arena", "breakout", "catcher", "caves", "dialog",
-	"dungeon", "jumper", "memory", "pong", "runner", "ship",
+	"dungeon", "horde", "jumper", "memory", "pong", "runner", "ship",
 	"zombie-night",
 }
 
@@ -50,6 +50,7 @@ func main() {
 	memory()
 	dialog()
 	ship()
+	horde()
 	fmt.Println("assets generated")
 }
 
@@ -246,6 +247,45 @@ func ship() {
 	starfield(d+"sprites/background.png", 800, 600, 170, rgb(0x0A0E1A), rgb(0x141B2E))
 	writeWav(d+"audios/hit.wav", noise(0.18, 0.45))
 	writeWav(d+"audios/theme.wav", melody(0.2, 0.18, 262, 330, 392, 523, 392, 330))
+}
+
+func horde() {
+	d := "examples/horde/"
+	strip(d+"sprites/hero.png", 3, heroWalk)
+	art(d+"sprites/idle.png", 3, heroWalk[0])
+	strip(d+"sprites/chaser.png", 3, zombieWalk)
+	art(d+"sprites/tuft.png", 3, tuftArt)
+	art(d+"sprites/stone.png", 3, stoneArt)
+	art(d+"sprites/flower.png", 3, flowerArt)
+	writeWav(d+"audios/hurt.wav", seq(tone(196, 0.1, 0.45), noise(0.08, 0.3)))
+	writeWav(d+"audios/theme.wav", melody(0.42, 0.14, 147, 175, 165, 131))
+}
+
+// tuftArt, stoneArt and flowerArt are the scenery scattered over the
+// horde example's field.
+var tuftArt = []string{
+	"   G    ",
+	" G G  G ",
+	" GhG G  ",
+	"  GG Gh ",
+	" gGGgGG ",
+	"  gggg  ",
+}
+
+var stoneArt = []string{
+	"  ssss  ",
+	" swwwss ",
+	"swwsssS ",
+	"sssssSS ",
+	" SSSSS  ",
+}
+
+var flowerArt = []string{
+	"  Y  ",
+	" YWY ",
+	"  Y  ",
+	"  G  ",
+	" gG  ",
 }
 
 // cometArt is the falling fireball in the ship game.

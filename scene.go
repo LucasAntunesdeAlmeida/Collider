@@ -1,6 +1,7 @@
 package collider
 
 import (
+	"math"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -22,6 +23,12 @@ type Scene struct {
 
 	gravity   float64
 	musicPath string
+
+	// camX, camY is the world point at the center of the screen. The
+	// default is the screen center itself, so a scene that never moves
+	// its camera draws world coordinates as screen coordinates.
+	camX, camY         float64
+	initCamX, initCamY float64
 
 	timers   []*timer
 	onClick  []func(x, y float64)
@@ -55,8 +62,36 @@ func newScene(g *Game, name string) *Scene {
 	return &Scene{
 		game:     g,
 		name:     name,
+		camX:     g.Width() / 2,
+		camY:     g.Height() / 2,
 		touching: map[pair]struct{}{},
 	}
+}
+
+// Camera centers the view on a world point: every object draws shifted
+// so that (x, y) lands in the middle of the screen, and clicks land in
+// the world where they appear to. Call it every frame to follow the
+// player. Objects marked Fixed ignore the camera. The default camera
+// looks at the screen center, where world and screen coordinates are
+// the same.
+func (s *Scene) Camera(x, y float64) {
+	s.camX, s.camY = x, y
+}
+
+// view returns the world position of the screen's top-left corner.
+// It is rounded to whole pixels so pixel art never shimmers while the
+// camera glides.
+func (s *Scene) view() (x, y float64) {
+	return math.Round(s.camX - s.game.Width()/2), math.Round(s.camY - s.game.Height()/2)
+}
+
+// origin returns the view origin an object draws and is clicked
+// against: the camera's for world objects, the screen's for Fixed ones.
+func (s *Scene) origin(o *Object) (x, y float64) {
+	if o.fixed {
+		return 0, 0
+	}
+	return s.view()
 }
 
 // Add puts an object into the scene. It is safe to call at any time,
@@ -95,7 +130,8 @@ func (s *Scene) After(sec float64, fn func()) {
 }
 
 // OnClick fires on every click anywhere in the scene, before any
-// object-level click handling.
+// object-level click handling. The position is in world coordinates,
+// so under a moving camera it is where the click lands in the world.
 func (s *Scene) OnClick(fn func(x, y float64)) {
 	s.onClick = append(s.onClick, fn)
 }
@@ -130,6 +166,7 @@ func (s *Scene) activate() {
 		return
 	}
 	s.activated = true
+	s.initCamX, s.initCamY = s.camX, s.camY
 	s.initial = slices.Clone(s.objects)
 	for _, o := range s.initial {
 		o.saveState()
@@ -138,11 +175,12 @@ func (s *Scene) activate() {
 
 // restart rolls the scene back to its initial snapshot: setup objects
 // restored (including destroyed ones), runtime spawns dropped, initial
-// timers re-armed, runtime timers dropped.
+// timers re-armed, runtime timers dropped, camera back where it was.
 func (s *Scene) restart() {
 	if !s.activated {
 		return
 	}
+	s.camX, s.camY = s.initCamX, s.initCamY
 	s.objects = slices.Clone(s.initial)
 	for _, o := range s.objects {
 		o.restoreState()
@@ -231,20 +269,23 @@ func (s *Scene) tick(dt float64) {
 }
 
 // clicks fires scene handlers on any click, then OnClick on the topmost
-// object under the cursor.
+// object under the cursor. Fixed objects are hit in screen space, the
+// rest in the world under the camera.
 func (s *Scene) clicks() {
 	if !s.game.input.clickJustPressed() {
 		return
 	}
 	x, y := s.game.Mouse()
+	vx, vy := s.view()
 	for _, fn := range slices.Clone(s.onClick) {
-		fn(x, y)
+		fn(x+vx, y+vy)
 	}
 	for _, o := range slices.Backward(s.objects) {
 		if o.dead || len(o.onClick) == 0 {
 			continue
 		}
-		if o.contains(x, y) {
+		ox, oy := s.origin(o)
+		if o.contains(x+ox, y+oy) {
 			for _, fn := range o.onClick {
 				fn()
 			}
@@ -347,10 +388,14 @@ func (s *Scene) flush() {
 	s.objects = alive
 }
 
+// draw renders every live object in scene order: world objects shifted
+// by the camera, Fixed ones straight to the screen.
 func (s *Scene) draw(screen *ebiten.Image) {
 	for _, o := range s.objects {
-		if !o.dead {
-			o.draw(screen)
+		if o.dead {
+			continue
 		}
+		vx, vy := s.origin(o)
+		o.draw(screen, vx, vy)
 	}
 }

@@ -13,7 +13,7 @@ the engine, and playing the games.
 | `*.go` (root) | The engine: one flat package, `collider` |
 | `agent.go` | Agent play: `Headless`, `Step`, `Observe`, `Autopilot`, MCP entry |
 | `internal/mcps/` | Minimal MCP server (stdio, JSON-RPC 2.0), no dependencies |
-| `examples/` | Fourteen complete games, one folder each, each with README and demo GIF |
+| `examples/` | Fifteen complete games, one folder each, each with README and demo GIF |
 | `examples/agent/` | Gem Rush: the reference agent-played game (no human input at all) |
 | `tools/genassets/` | Regenerates all placeholder art from ASCII pixel grids |
 | `tools/cover/` | Regenerates `.github/social-preview.png` from real assets |
@@ -70,7 +70,9 @@ back as one observation per step:
 Objects carry `tag`, position (`x`, `y` is the center), velocity
 (`vx`, `vy`), size (`w`, `h`), `solid`, and `text` for HUD labels, so
 scores and instructions are readable. The player is tagged `"player"`.
-Decorative scenery is filtered out for you.
+Decorative scenery is filtered out for you. Positions are world
+coordinates; HUD objects pinned to the screen report screen coordinates
+and carry `"fixed": true`.
 
 **Over MCP** (any client, or you via a subprocess): run a game with the
 `COLLIDER_AGENT=mcp` env var and its stdio becomes an MCP server with

@@ -37,6 +37,7 @@ type Object struct {
 	isText    bool
 	isButton  bool
 	visual    bool
+	fixed     bool
 	textStr   string
 	fontPath  string
 	textSize  float64
@@ -283,16 +284,20 @@ func (o *Object) contains(x, y float64) bool {
 	return physics.Contains(o.box(), x, y)
 }
 
-func (o *Object) draw(screen *ebiten.Image) {
+// draw renders the object with its top-left corner at its position
+// minus the view origin (vx, vy): the camera shift, or zero for Fixed
+// objects.
+func (o *Object) draw(screen *ebiten.Image, vx, vy float64) {
 	img := o.img
 	if f := o.animFrame(); f != nil {
 		img = f
 	}
+	left, top := o.X-o.w/2-vx, o.Y-o.h/2-vy
 	switch {
 	case o.isText:
-		o.drawText(screen)
+		o.drawText(screen, left, top)
 	case o.isButton:
-		o.drawButton(screen)
+		o.drawButton(screen, left, top)
 	case img != nil:
 		op := &ebiten.DrawImageOptions{}
 		b := img.Bounds()
@@ -300,11 +305,11 @@ func (o *Object) draw(screen *ebiten.Image) {
 		if iw != o.w || ih != o.h {
 			op.GeoM.Scale(o.w/iw, o.h/ih)
 		}
-		op.GeoM.Translate(o.X-o.w/2, o.Y-o.h/2)
+		op.GeoM.Translate(left, top)
 		screen.DrawImage(img, op)
 	case o.fill != nil:
 		vector.FillRect(screen,
-			float32(o.X-o.w/2), float32(o.Y-o.h/2),
+			float32(left), float32(top),
 			float32(o.w), float32(o.h),
 			o.fill, false)
 	}

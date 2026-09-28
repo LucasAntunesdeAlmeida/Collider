@@ -48,6 +48,10 @@ type ObjectObs struct {
 	H     float64 `json:"h"`
 	Solid bool    `json:"solid,omitempty"`
 	Text  string  `json:"text,omitempty"`
+	// Fixed objects (the HUD) report screen coordinates; everything
+	// else is in world coordinates, which differ once the scene moves
+	// its camera.
+	Fixed bool `json:"fixed,omitempty"`
 }
 
 // DisallowAgents turns agent play off for this game: Headless, Step and
@@ -153,7 +157,7 @@ func (g *Game) Observe() Observation {
 		}
 		obs.Objects = append(obs.Objects, ObjectObs{
 			Tag: o.tag, X: o.X, Y: o.Y, Vx: o.Vx, Vy: o.Vy,
-			W: o.w, H: o.h, Solid: o.solid, Text: o.textStr,
+			W: o.w, H: o.h, Solid: o.solid, Text: o.textStr, Fixed: o.fixed,
 		})
 	}
 	if g.stateFn != nil {

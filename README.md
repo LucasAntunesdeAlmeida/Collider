@@ -39,7 +39,7 @@ claude mcp add mygame -e COLLIDER_AGENT=mcp -- C:\path\to\mygame.exe
   itself
 - Scenes, timers, sprite-sheet animations, text with custom TTF fonts,
   sound and music (wav/ogg)
-- Fourteen example games across genres, from pong to a dungeon crawler,
+- Fifteen example games across genres, from pong to a dungeon crawler,
   each one a template you can start from
 - Shipping built in: embed assets into a single .exe or build for the
   browser; one example is [live on itch.io](https://lucasantunesdealmeida.itch.io/ship)
@@ -127,7 +127,7 @@ func main() {
 
 ## Example games
 
-Fourteen complete games, each exercising a different part of the engine
+Fifteen complete games, each exercising a different part of the engine
 and each a starting point for your own. Run any of them from its own
 folder so the asset paths resolve:
 
@@ -142,6 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -171,6 +172,9 @@ motion, size and text (so HUDs and scores are readable):
   {"text": "SCORE 12", "x": 64, "y": 24, "w": 96, "h": 16}
 ], "state": {"lives": 2, "wave": 3}}
 ```
+
+Positions are world coordinates; objects pinned to the screen with
+`Fixed` (a HUD) report screen coordinates and carry `"fixed": true`.
 
 Three optional calls make any game, however complex, fully
 agent-playable and self-describing:
@@ -289,6 +293,7 @@ does not exist. That is the point.
 | `s.OnUpdate(fn(dt))` | Runs every frame while the scene is active |
 | `s.OnCollision(tagA, tagB, fn(a, b))` | Rule for every current and future pair |
 | `s.Count(tag) int` | How many objects with this tag are alive |
+| `s.Camera(x, y)` | Center the view on a world point (follow the player every frame) |
 
 ### Object: constructors and configuration (chainable)
 
@@ -302,6 +307,8 @@ does not exist. That is the point.
 | `.Tag(name)` | Label for tag-based collision rules |
 | `.Solid()` | Engine resolves overlaps (walls, floors, paddles) |
 | `.WithGravity()` | Affected by the scene's gravity |
+| `.Visual()` | Decoration: drawn, never collides |
+| `.Fixed()` | Pinned to the screen: ignores the camera, never collides (HUD) |
 | `.Size(w, h)` | Override collider size |
 | `.Animation(name, strip, frames, fps)` | Define a sprite-sheet animation |
 | `.Font(path)` / `.TextSize(px)` / `.TextColor(c)` | Text styling (custom TTF, size, color) |

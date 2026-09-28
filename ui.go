@@ -51,6 +51,17 @@ func (o *Object) Visual() *Object {
 	return o
 }
 
+// Fixed pins the object to the screen: its position is in screen
+// pixels, it ignores the scene camera, and clicks hit it where it is
+// drawn. The HUD, a pause button, a virtual joystick. Like Visual
+// objects, fixed ones never collide: they do not live in the world.
+// Chainable.
+func (o *Object) Fixed() *Object {
+	o.fixed = true
+	o.visual = true
+	return o
+}
+
 // shade scales a color's channels, for deriving bevel edges.
 func shade(c Color, factor float64) color.RGBA {
 	r, g, b, _ := c.RGBA()
@@ -71,9 +82,9 @@ func shade(c Color, factor float64) color.RGBA {
 	}
 }
 
-func (o *Object) drawButton(screen *ebiten.Image) {
-	x := float32(o.X - o.w/2)
-	y := float32(o.Y - o.h/2)
+func (o *Object) drawButton(screen *ebiten.Image, left, top float64) {
+	x := float32(left)
+	y := float32(top)
 	w := float32(o.w)
 	h := float32(o.h)
 	const edge = 4
@@ -89,7 +100,7 @@ func (o *Object) drawButton(screen *ebiten.Image) {
 	face := o.fontFace()
 	tw, th := text.Measure(o.textStr, face, 0)
 	op := &text.DrawOptions{}
-	op.GeoM.Translate(o.X-tw/2, o.Y-th/2)
+	op.GeoM.Translate(left+o.w/2-tw/2, top+o.h/2-th/2)
 	op.ColorScale.ScaleWithColor(o.textColor)
 	text.Draw(screen, o.textStr, face, op)
 }
