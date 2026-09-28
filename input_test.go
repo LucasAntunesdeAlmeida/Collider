@@ -13,6 +13,8 @@ import (
 type fakeDevices struct {
 	mouseX, mouseY int
 	mouseClick     bool
+	mouseHeld      bool
+	unfocused      bool
 	touches        []ebiten.TouchID
 	justPressed    []ebiten.TouchID
 	pos            map[ebiten.TouchID][2]int
@@ -24,9 +26,11 @@ func fakeInput(t *testing.T) *fakeDevices {
 
 	oldCursor, oldTouches := cursorPosition, appendTouchIDs
 	oldPos, oldPressed, oldClick := touchPosition, appendJustPressedTouchIDs, mouseClickJustPressed
+	oldHeld, oldFocus := mouseButtonPressed, windowFocused
 	t.Cleanup(func() {
 		cursorPosition, appendTouchIDs = oldCursor, oldTouches
 		touchPosition, appendJustPressedTouchIDs, mouseClickJustPressed = oldPos, oldPressed, oldClick
+		mouseButtonPressed, windowFocused = oldHeld, oldFocus
 	})
 
 	cursorPosition = func() (int, int) { return d.mouseX, d.mouseY }
@@ -39,6 +43,8 @@ func fakeInput(t *testing.T) *fakeDevices {
 		return p[0], p[1]
 	}
 	mouseClickJustPressed = func() bool { return d.mouseClick }
+	mouseButtonPressed = func() bool { return d.mouseHeld }
+	windowFocused = func() bool { return !d.unfocused }
 	return d
 }
 
@@ -166,5 +172,102 @@ func TestMixedInputReadsTouch(t *testing.T) {
 	m.agent.click, m.agent.x, m.agent.y = true, 9, 9
 	if x, y := m.cursor(); x != 9 || y != 9 {
 		t.Fatalf("agent input should take precedence, got %v,%v", x, y)
+	}
+}
+
+func TestMouseDownReadsButtonAndFingers(t *testing.T) {
+	d := fakeInput(t)
+	r := &realInput{}
+
+	if r.pointerDown() {
+		t.Fatal("nothing held should not be down")
+	}
+	d.mouseHeld = true
+	if !r.pointerDown() {
+		t.Fatal("a held left button should be down")
+	}
+	d.mouseHeld = false
+
+	d.press(1, 50, 60)
+	d.frame()
+	if !r.pointerDown() {
+		t.Fatal("a finger resting on the glass should be down")
+	}
+	d.press(2, 70, 80)
+	d.lift(1)
+	if !r.pointerDown() {
+		t.Fatal("any finger still down keeps the pointer down")
+	}
+	d.lift(2)
+	if r.pointerDown() {
+		t.Fatal("no fingers and no button should be up")
+	}
+}
+
+func TestMixedInputOrsPointerDown(t *testing.T) {
+	d := fakeInput(t)
+	m := &mixedInput{agent: &agentInput{}}
+
+	if m.pointerDown() {
+		t.Fatal("idle should be up")
+	}
+	d.mouseHeld = true
+	if !m.pointerDown() {
+		t.Fatal("the person's held button should count")
+	}
+	d.mouseHeld = false
+	m.agent.down, m.agent.x, m.agent.y = true, 30, 40
+	if !m.pointerDown() {
+		t.Fatal("the agent's held pointer should count")
+	}
+	d.mouseX, d.mouseY = 500, 500
+	if x, y := m.cursor(); x != 30 || y != 40 {
+		t.Fatalf("a held agent pointer answers for the cursor, got %v,%v", x, y)
+	}
+}
+
+func TestFocused(t *testing.T) {
+	d := fakeInput(t)
+	r := &realInput{}
+	if !r.focused() {
+		t.Fatal("a focused window should report focus")
+	}
+	d.unfocused = true
+	if r.focused() {
+		t.Fatal("an unfocused window should report it")
+	}
+	// Agent play never loses focus: nobody to switch away, and a
+	// person in their MCP client must not pause the agent's game.
+	if !(&mixedInput{agent: &agentInput{}}).focused() || !(&agentInput{}).focused() {
+		t.Fatal("agent input should always be focused")
+	}
+}
+
+func TestHeadlessMouseDownAndFocus(t *testing.T) {
+	g := New("down-test", 800, 600)
+	s := g.Scene("play")
+	var downs []bool
+	var at [2]float64
+	s.OnUpdate(func(float64) {
+		downs = append(downs, g.MouseDown())
+		if g.MouseDown() {
+			at[0], at[1] = g.Mouse()
+		}
+		if !g.Focused() {
+			t.Fatal("headless play is always focused")
+		}
+	})
+	g.Headless("play")
+	downs = nil
+
+	g.Step(Action{})
+	g.Step(Action{MouseDown: true, MouseX: 120, MouseY: 80})
+	g.Step(Action{Click: true, MouseX: 10, MouseY: 20})
+	g.Step(Action{})
+	if want := []bool{false, true, true, false}; !slices.Equal(downs, want) {
+		t.Fatalf("MouseDown per frame = %v, want %v (Click implies down)", downs, want)
+	}
+	if at != [2]float64{10, 20} {
+		t.Fatalf("pointer position while down, got %v", at)
 	}
 }

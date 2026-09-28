@@ -24,6 +24,9 @@ type Action struct {
 	MouseX float64 `json:"mouseX"`
 	MouseY float64 `json:"mouseY"`
 	Click  bool    `json:"click"` // press the left button this frame
+	// MouseDown holds the pointer at MouseX, MouseY this frame (drags,
+	// virtual joysticks); Click implies it on its frame.
+	MouseDown bool `json:"mouseDown"`
 }
 
 // Observation is the structured view of the current frame: the scene
@@ -132,6 +135,7 @@ func (g *Game) injectAction(a Action) {
 	}
 	in.x, in.y = a.MouseX, a.MouseY
 	in.click = a.Click
+	in.down = a.MouseDown
 }
 
 // Step advances exactly one frame with the given input and returns the
@@ -274,8 +278,8 @@ func (g *Game) serveMCP() {
 		},
 		{
 			Name:        "act",
-			Description: "Hold keys and/or click, then advance the game. keys: " + keysHelp + ". frames: how many 1/60s frames to advance with this input held (default 10). click presses the mouse at x,y on the first frame.",
-			Schema:      `{"type":"object","properties":{"keys":{"type":"array","items":{"type":"string"}},"frames":{"type":"number"},"click":{"type":"boolean"},"x":{"type":"number"},"y":{"type":"number"}}}`,
+			Description: "Hold keys and/or click, then advance the game. keys: " + keysHelp + ". frames: how many 1/60s frames to advance with this input held (default 10). click presses the mouse at x,y on the first frame. down holds the pointer (mouse button or finger) at x,y for all the frames: drags and virtual joysticks.",
+			Schema:      `{"type":"object","properties":{"keys":{"type":"array","items":{"type":"string"}},"frames":{"type":"number"},"click":{"type":"boolean"},"down":{"type":"boolean"},"x":{"type":"number"},"y":{"type":"number"}}}`,
 			Call: func(args map[string]any) (string, error) {
 				a := Action{}
 				if ks, ok := args["keys"].([]any); ok {
@@ -292,6 +296,7 @@ func (g *Game) serveMCP() {
 					a.MouseY = y
 				}
 				a.Click, _ = args["click"].(bool)
+				a.MouseDown, _ = args["down"].(bool)
 				frames := 10
 				if f, ok := args["frames"].(float64); ok && f >= 1 {
 					frames = int(f)

@@ -258,6 +258,8 @@ func horde() {
 	art(d+"sprites/tuft.png", 3, tuftArt)
 	art(d+"sprites/stone.png", 3, stoneArt)
 	art(d+"sprites/flower.png", 3, flowerArt)
+	disc(d+"sprites/ring.png", 32, 3, 13, pal['W'], pal['s'])
+	disc(d+"sprites/knob.png", 12, 3, 0, pal['W'], pal['w'])
 	writeWav(d+"audios/hurt.wav", seq(tone(196, 0.1, 0.45), noise(0.08, 0.3)))
 	writeWav(d+"audios/hit.wav", seq(noise(0.03, 0.35), tone(523, 0.04, 0.3)))
 	writeWav(d+"audios/theme.wav", melody(0.42, 0.14, 147, 175, 165, 131))

@@ -14,7 +14,10 @@
 // and fade out with Alpha when they fall. Area queries do the rest:
 // Near aims the darts, Touching deals contact damage every moment a
 // chaser is on the hero, not just when contact begins. Esc or P pauses:
-// a "pause" scene opens as an Overlay on top of the frozen night.
+// a "pause" scene opens as an Overlay on top of the frozen night, and
+// so does switching to another window (Focused). On a touch screen, or
+// with the mouse, press and drag anywhere to steer: MouseDown drives a
+// virtual joystick.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -41,6 +44,7 @@ const (
 	layerDarts
 	layerHero
 	layerHUD
+	layerStick
 )
 
 func main() {
@@ -66,6 +70,35 @@ func main() {
 	play.Add(engine.Rect(barLen+4, 16, engine.Black).At(130, 30).Fixed().Layer(layerHUD))
 	bar := play.Add(engine.Rect(barLen, 12, engine.Red).At(130, 30).Fixed().Layer(layerHUD))
 
+	// The virtual joystick: press anywhere and drag. The press point is
+	// the center; the knob follows the pointer up to the ring's edge.
+	ring := play.Add(engine.Sprite("sprites/ring.png").Fixed().Layer(layerStick).Alpha(0))
+	knob := play.Add(engine.Sprite("sprites/knob.png").Fixed().Layer(layerStick).Alpha(0))
+	held, sx, sy := false, 0.0, 0.0
+	stick := func() (dx, dy float64) {
+		if !g.MouseDown() {
+			held = false
+			ring.Alpha(0)
+			knob.Alpha(0)
+			return 0, 0
+		}
+		mx, my := g.Mouse()
+		if !held { // just pressed: this point is the center
+			held, sx, sy = true, mx, my
+		}
+		dx, dy = mx-sx, my-sy
+		d := math.Hypot(dx, dy)
+		if d > 48 { // the knob stops at the ring
+			dx, dy = dx/d*48, dy/d*48
+		}
+		ring.At(sx, sy).Alpha(0.5)
+		knob.At(sx+dx, sy+dy).Alpha(0.8)
+		if d < 8 { // dead zone: a tap or a shaky thumb does not walk
+			return 0, 0
+		}
+		return dx, dy
+	}
+
 	survived, kills, hp := 0.0, 0, maxHP
 	facing := 0.0 // radians, the way the hero last moved
 	safe := 0.0   // seconds of invulnerability left after a hit
@@ -82,6 +115,9 @@ func main() {
 		}
 		if g.Key(engine.S) || g.Key(engine.Down) {
 			dy++
+		}
+		if sdx, sdy := stick(); dx == 0 && dy == 0 {
+			dx, dy = sdx, sdy // no keys held: the joystick steers
 		}
 		if d := math.Hypot(dx, dy); d > 0 {
 			hero.Move(dx/d*210*dt, dy/d*210*dt)
@@ -167,7 +203,8 @@ func main() {
 		return edge
 	}
 	play.OnUpdate(func(float64) {
-		if pressed() {
+		// Switching to another window pauses too.
+		if pressed() || !g.Focused() {
 			g.Overlay("pause")
 		}
 	})

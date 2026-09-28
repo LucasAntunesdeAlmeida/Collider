@@ -54,6 +54,8 @@ type inputSource interface {
 	keyPressed(Key) bool
 	cursor() (float64, float64)
 	clickJustPressed() bool
+	pointerDown() bool
+	focused() bool
 }
 
 // The device reads realInput makes, kept as variables so tests can
@@ -67,6 +69,10 @@ var (
 	mouseClickJustPressed     = func() bool {
 		return inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 	}
+	mouseButtonPressed = func() bool {
+		return ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	}
+	windowFocused = ebiten.IsFocused
 )
 
 // realInput reads the actual devices through Ebitengine.
@@ -145,11 +151,23 @@ func (r *realInput) clickJustPressed() bool {
 	return len(r.justPressed) > 0
 }
 
+// pointerDown is the left button held, or any finger on the glass.
+func (r *realInput) pointerDown() bool {
+	if mouseButtonPressed() {
+		return true
+	}
+	r.touches = appendTouchIDs(r.touches[:0])
+	return len(r.touches) > 0
+}
+
+func (*realInput) focused() bool { return windowFocused() }
+
 // agentInput is fed by Step calls instead of hardware.
 type agentInput struct {
 	keys  map[Key]bool
 	x, y  float64
 	click bool
+	down  bool // pointer held; a click implies it for its frame
 }
 
 // mixedInput merges the real keyboard and mouse with agent-injected
@@ -165,7 +183,7 @@ func (m *mixedInput) keyPressed(k Key) bool {
 }
 
 func (m *mixedInput) cursor() (float64, float64) {
-	if m.agent.click {
+	if m.agent.click || m.agent.down {
 		return m.agent.x, m.agent.y
 	}
 	return m.real.cursor()
@@ -175,9 +193,20 @@ func (m *mixedInput) clickJustPressed() bool {
 	return m.agent.click || m.real.clickJustPressed()
 }
 
+func (m *mixedInput) pointerDown() bool {
+	return m.agent.pointerDown() || m.real.pointerDown()
+}
+
+// focused is always true in windowed agent play: the person is often
+// in another window (the MCP client) while the agent plays, and the
+// game must not pause itself under the agent.
+func (m *mixedInput) focused() bool { return true }
+
 func (a *agentInput) keyPressed(k Key) bool      { return a.keys[k] }
 func (a *agentInput) cursor() (float64, float64) { return a.x, a.y }
 func (a *agentInput) clickJustPressed() bool     { return a.click }
+func (a *agentInput) pointerDown() bool          { return a.down || a.click }
+func (a *agentInput) focused() bool              { return true }
 
 // Key reports whether a key is currently held down.
 func (g *Game) Key(k Key) bool {
@@ -187,4 +216,20 @@ func (g *Game) Key(k Key) bool {
 // Mouse returns the cursor position in game coordinates.
 func (g *Game) Mouse() (x, y float64) {
 	return g.input.cursor()
+}
+
+// MouseDown reports whether the pointer is held: the left mouse button,
+// or any finger on a touch screen. Drag, aim, charge, a virtual
+// joystick: read it with Mouse every frame. Clicks (a press) still
+// arrive through OnClick.
+func (g *Game) MouseDown() bool {
+	return g.input.pointerDown()
+}
+
+// Focused reports whether the game window has the keyboard focus, so
+// a game can pause itself when the player switches away. Always true
+// in headless and agent play (Step, MCP, Autopilot), where there is no
+// player to switch away.
+func (g *Game) Focused() bool {
+	return g.input.focused()
 }

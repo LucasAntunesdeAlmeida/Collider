@@ -149,3 +149,26 @@ func fillBox(img *image.RGBA, x, y, w, h int, c color.RGBA) {
 		}
 	}
 }
+
+// disc draws a pixel-art circle of cells x cells blocks at scale: a
+// solid disc when hole is 0, else a ring whose inner radius is hole
+// cells. The outer rim uses edge, the rest body. The horde example's
+// virtual joystick is a ring and a knob.
+func disc(path string, cells, scale int, hole float64, body, edge color.RGBA) {
+	img := image.NewRGBA(image.Rect(0, 0, cells*scale, cells*scale))
+	r := float64(cells) / 2
+	for y := range cells {
+		for x := range cells {
+			d := math.Hypot(float64(x)+0.5-r, float64(y)+0.5-r)
+			switch {
+			case d > r || d < hole:
+				continue
+			case d > r-1.2 || (hole > 0 && d < hole+1):
+				fillBox(img, x*scale, y*scale, scale, scale, edge)
+			default:
+				fillBox(img, x*scale, y*scale, scale, scale, body)
+			}
+		}
+	}
+	writePng(path, img)
+}

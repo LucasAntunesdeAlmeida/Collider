@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); an overlay pause menu |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); an overlay pause menu; a drag joystick and pause on focus loss |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -199,7 +199,8 @@ Four ways in:
 - **MCP** (AI agents): run any Collider game with `COLLIDER_AGENT=mcp`
   and it serves MCP on stdio (`observe`, `act`, `reset` tools). Any MCP
   client can connect and play your game; `act` accepts any keyboard key
-  by name, or the names you declared with `Controls`.
+  by name, or the names you declared with `Controls`, plus `click` or
+  a held pointer (`down`) at `x`, `y`.
 - **Windowed MCP** (fight the AI): `COLLIDER_AGENT=mcp-window` opens
   the normal window running in real time while serving the same MCP
   tools. Agent input merges with the keyboard, so a person and an
@@ -276,6 +277,8 @@ does not exist. That is the point.
 | `g.Run(name)` | Start the loop on a scene (blocks) |
 | `g.Key(k) bool` | Is this key held? |
 | `g.Mouse() (x, y)` | Cursor position (a finger on a touch screen counts) |
+| `g.MouseDown() bool` | Is the left button (or any finger) held? Drags, virtual joysticks |
+| `g.Focused() bool` | Does the window have focus? Pause when the player switches away (always true for agents) |
 | `g.Sound(path)` | Fire-and-forget sound effect |
 | `g.Quit()` | Exit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
@@ -368,6 +371,7 @@ does not exist. That is the point.
    as the mouse, so a game built for a mouse works on a phone without a
    second input path. A lifted finger leaves the cursor where it was, so
    anything following the cursor stays put until the next touch.
+   `g.MouseDown()` is true while the button or any finger is held.
 7. **An overlay freezes the scene under it.** While `g.Overlay` is open,
    only the overlay updates, ticks timers, takes clicks and collides;
    the scene under it still draws but does not advance at all. Opening

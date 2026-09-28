@@ -7,7 +7,9 @@ move the hero, who throws a dart every 0.3 seconds at the nearest
 chaser (or the way they face, when none is in range); chasers pour in
 from just beyond the edges of the view, wherever the hero goes, and
 fall after three darts. Every moment a chaser touches the hero costs
-health; when the bar runs out, the horde wins. Esc or P pauses.
+health; when the bar runs out, the horde wins. Esc or P pauses, and
+so does switching to another window. No keyboard? Press anywhere and
+drag to steer.
 
 ```bash
 cd examples/horde
@@ -135,3 +137,42 @@ pressed := func() bool {
 Both scenes call the same `pressed`, so the state carries across the
 switch (only one of them updates each frame): holding Esc pauses once,
 and the next press resumes.
+
+## Held pointer: a virtual joystick
+
+```go
+if !g.MouseDown() { // button up, no finger on the glass
+	held = false
+	return 0, 0
+}
+mx, my := g.Mouse()
+if !held { // just pressed: this point is the center
+	held, sx, sy = true, mx, my
+}
+dx, dy = mx-sx, my-sy // steer toward the drag
+```
+
+- `g.MouseDown()` is true while the left button or any finger is held,
+  so one path serves the mouse and a phone. Pressing anywhere sets the
+  joystick's center; dragging steers the hero toward the pointer. An
+  8-pixel dead zone ignores taps and shaky thumbs, and the knob stops
+  at the ring's 48-pixel radius.
+- The ring and the knob are two `Fixed` sprites on a layer above the
+  HUD, shown with `Alpha` while the pointer is held and hidden
+  (`Alpha(0)`) otherwise. The keyboard wins when both are in use.
+- Agents drag too: an `Action` with `MouseDown: true`, or the MCP act
+  tool's `down` flag, holds the pointer at `x`, `y`.
+
+## Focus: pause when the player looks away
+
+```go
+if pressed() || !g.Focused() {
+	g.Overlay("pause")
+}
+```
+
+`g.Focused()` reports whether the window has the keyboard focus. When
+the player alt-tabs away (or switches browser tabs), the night pauses
+itself instead of killing them off screen, and stays paused until they
+choose RESUME. Headless and agent play are always focused, so bots and
+MCP agents never get paused by a window they do not have.
