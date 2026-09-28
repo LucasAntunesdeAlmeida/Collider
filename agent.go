@@ -87,9 +87,10 @@ func (g *Game) AgentDocs(docs string) {
 }
 
 // Controls names this game's inputs for agents: action name to key,
-// like {"jump": engine.Space, "p2-attack": ebiten.KeyNumpad1}. The MCP
-// act tool then accepts these names and lists them in its description,
-// so any agent discovers how to play without reading the game's source.
+// like {"jump": engine.Space, "p2-attack": engine.KeyNamed("Numpad1")}.
+// The MCP act tool then accepts these names and lists them in its
+// description, so any agent discovers how to play without reading the
+// game's source.
 // Optional; raw key names always work.
 func (g *Game) Controls(controls map[string]Key) {
 	g.controls = controls
@@ -214,7 +215,7 @@ func (g *Game) resolveKeys(names []any) ([]Key, error) {
 			keys = append(keys, k)
 			continue
 		}
-		hint := `a keyboard key name like "J", "Numpad1" or "ArrowLeft"`
+		hint := `a keyboard key name like "J", "1", "Numpad1" or "ArrowLeft"`
 		if len(g.controls) > 0 {
 			hint = "one of this game's controls [" +
 				strings.Join(g.controlNames(), ", ") + "] or " + hint
@@ -257,7 +258,7 @@ func (g *Game) serveMCP() {
 
 	// The act tool describes this game's own controls when declared,
 	// so the server is self-documenting for any MCP client.
-	keysHelp := `any keyboard key name, e.g. "J", "Numpad1", "ShiftLeft" (aliases: Left, Right, Up, Down, Space, Enter, Esc)`
+	keysHelp := `any keyboard key name, e.g. "J", "Digit1", "Numpad1", "ShiftLeft" (aliases: "0"-"9" for the number row, Left, Right, Up, Down, Space, Enter, Esc)`
 	if len(g.controls) > 0 {
 		keysHelp = "this game's controls: [" + strings.Join(g.controlNames(), ", ") +
 			"] (raw keyboard key names also work)"

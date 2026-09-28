@@ -7,8 +7,9 @@ move the hero, who throws a dart every 0.3 seconds at the nearest
 chaser (or the way they face, when none is in range); chasers pour in
 from just beyond the edges of the view, wherever the hero goes, and
 fall after three darts. Every moment a chaser touches the hero costs
-health; when the bar runs out, the horde wins. Esc or P pauses, and
-so does switching to another window. No keyboard? Press anywhere and
+health; when the bar runs out, the horde wins. Esc or P pauses (then
+1 resumes, 2 gives up), and so does switching to another window. No
+keyboard? Press anywhere and
 drag to steer. M mutes.
 
 ```bash
@@ -162,6 +163,32 @@ pausePressed, mutePressed := edge(engine.Esc, engine.P), edge(engine.M)
 Both scenes call the same `pausePressed`, so the state carries across
 the switch (only one of them updates each frame): holding Esc pauses
 once, and the next press resumes.
+
+**Keys by name.** The menu entries read "1 RESUME" and "2 GIVE UP",
+and the number keys pick them. The engine exports constants only for
+the usual game controls; every other key is one call away, by the
+same name agents use over MCP:
+
+```go
+resumeKey, giveUpKey := engine.KeyNamed("1"), engine.KeyNamed("2")
+pause.OnUpdate(func(float64) {
+	if pausePressed() || g.Key(resumeKey) {
+		g.CloseOverlay()
+	}
+	if g.Key(giveUpKey) {
+		lose()
+	}
+})
+```
+
+`engine.KeyNamed(name)` takes letters (`"J"`), the number row as
+`"1"` or `"Digit1"`, the keypad as `"Numpad1"`, `"F1"`, `"Tab"`,
+`"ShiftLeft"`, `"ArrowLeft"` and the rest of the keyboard, plus the
+aliases `Left`, `Right`, `Up`, `Down`, `Space`, `Enter`, `Esc`. Names
+are case sensitive, and an unknown one panics, so a typo shows up the
+first time the game starts rather than as a key that silently never
+works. No edge detector is needed here: the number keys do nothing
+outside the pause menu, so holding one cannot flip anything back.
 
 ## Held pointer: a virtual joystick
 

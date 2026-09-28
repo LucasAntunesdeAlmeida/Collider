@@ -1,6 +1,7 @@
 package collider
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -8,7 +9,7 @@ import (
 )
 
 // Key identifies a keyboard key. The constants below cover common game
-// controls; any ebiten.Key value also works.
+// controls; KeyNamed reaches every other key by name.
 type Key = ebiten.Key
 
 const (
@@ -29,10 +30,11 @@ const (
 	M     = ebiten.KeyM
 )
 
-// keyNames maps every keyboard key's name to its key, so agents can
-// press anything a player can. Names are ebiten's ("J", "Numpad1",
-// "ShiftLeft", "ArrowLeft"), plus short aliases for the most common
-// keys.
+// keyNames maps every keyboard key's name to its key, so agents (and
+// KeyNamed) can press anything a player can. Names are ebiten's ("J",
+// "Digit1", "Numpad1", "ShiftLeft", "ArrowLeft"), plus short aliases:
+// the digits "0" to "9" for the number row, and Left, Right, Up, Down,
+// Space, Enter, Esc.
 var keyNames = func() map[string]Key {
 	m := map[string]Key{}
 	for k := Key(0); k <= ebiten.KeyMax; k++ {
@@ -46,8 +48,28 @@ var keyNames = func() map[string]Key {
 	} {
 		m[alias] = k
 	}
+	for d := range 10 {
+		m[string(rune('0'+d))] = ebiten.KeyDigit0 + Key(d)
+	}
 	return m
 }()
+
+// KeyNamed returns the key with this name, for keys beyond the
+// constants: KeyNamed("1") for a card pick, KeyNamed("Tab"),
+// KeyNamed("F1"). It accepts the same names agents send over MCP, case
+// sensitive: letters "A" to "Z"; the number row as "0" to "9" or
+// "Digit0" to "Digit9" (the keypad is "Numpad0" to "Numpad9"); "F1" to
+// "F24"; the ebiten names of the rest ("ArrowLeft", "ShiftLeft",
+// "Escape", "Backspace", "Tab", "Comma", "Minus", ...); and the aliases
+// Left, Right, Up, Down, Space, Enter, Esc. An unknown name panics: a
+// typo is a bug, so look keys up once, at setup.
+func KeyNamed(name string) Key {
+	k, ok := keyNames[name]
+	if !ok {
+		panic(fmt.Sprintf(`collider: unknown key name %q (names look like "J", "1", "Digit1", "Numpad1", "ArrowLeft", "Tab")`, name))
+	}
+	return k
+}
 
 // inputSource is where a Game reads its input from: the real keyboard
 // and mouse in normal play, injected state in agent/headless play.

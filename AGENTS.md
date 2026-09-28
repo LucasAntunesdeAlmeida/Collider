@@ -88,8 +88,9 @@ initialize instructions.
 - `observe` returns the current observation (plus a `state` field when
   the game attached one with `AgentState`).
 - `act` holds input and advances time: `keys` is any keyboard key by
-  name (`"J"`, `"Numpad1"`, `"ShiftLeft"`; aliases `Left, Right, Up,
-  Down, Space, Enter, Esc`), or, when the game declared
+  name (`"J"`, `"Digit1"`, `"Numpad1"`, `"ShiftLeft"`; aliases `"0"`
+  to `"9"` for the number row, and `Left, Right, Up, Down, Space,
+  Enter, Esc`), or, when the game declared
   `g.Controls(...)`, the control names the tool description lists.
   Optional `click` at `x`, `y` (a press on the first frame), `down` to
   hold the pointer at `x`, `y` for every frame (drags, virtual

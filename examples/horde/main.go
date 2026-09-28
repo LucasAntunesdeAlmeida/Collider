@@ -18,9 +18,10 @@
 // smaller than their sprites, so a brushing arm or an empty sprite
 // corner never costs health. Esc or P pauses: a "pause" scene opens as
 // an Overlay on top of the frozen night, and so does switching to
-// another window (Focused). On a touch screen, or
-// with the mouse, press and drag anywhere to steer: MouseDown drives a
-// virtual joystick. M mutes and unmutes everything with Volume.
+// another window (Focused); its entries answer to the 1 and 2 keys,
+// looked up with KeyNamed. On a touch screen, or with the mouse, press
+// and drag anywhere to steer: MouseDown drives a virtual joystick. M
+// mutes and unmutes everything with Volume.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -284,14 +285,20 @@ func main() {
 	pause := g.Scene("pause")
 	pause.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Alpha(0.6).Fixed())
 	pause.Add(engine.Text("PAUSED").At(400, 200).Font(font).TextSize(32))
-	pause.Add(engine.Button("RESUME").At(400, 320).Font(font).TextSize(18).Color(engine.Green)).
+	pause.Add(engine.Button("1 RESUME").At(400, 320).Font(font).TextSize(18).Color(engine.Green)).
 		OnClick(g.CloseOverlay)
-	pause.Add(engine.Button("GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red)).
+	pause.Add(engine.Button("2 GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red)).
 		OnClick(lose) // Go closes the overlay too
+	// The number keys pick the entries too. The number row has no
+	// constant; KeyNamed reaches any key by name, once, at setup.
+	resumeKey, giveUpKey := engine.KeyNamed("1"), engine.KeyNamed("2")
 	pause.OnUpdate(func(float64) {
 		muteKey()
-		if pausePressed() {
+		if pausePressed() || g.Key(resumeKey) {
 			g.CloseOverlay()
+		}
+		if g.Key(giveUpKey) {
+			lose()
 		}
 	})
 

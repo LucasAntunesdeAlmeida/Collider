@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu; a drag joystick and pause on focus loss; a mute key |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -290,6 +290,7 @@ does not exist. That is the point.
 | `g.CloseOverlay()` | Remove the overlay; the scene under it resumes where it froze |
 | `g.Run(name)` | Start the loop on a scene (blocks) |
 | `g.Key(k) bool` | Is this key held? |
+| `engine.KeyNamed(name) Key` | Any key by name, for keys without a constant: `"1"`/`"Digit1"` (number row), `"Numpad1"`, `"J"`, `"F1"`, `"Tab"`, `"ShiftLeft"`...; the names agents use; panics on an unknown name |
 | `g.Mouse() (x, y)` | Cursor position (a finger on a touch screen counts) |
 | `g.MouseDown() bool` | Is the left button (or any finger) held? Drags, virtual joysticks |
 | `g.Focused() bool` | Does the window have focus? Pause when the player switches away (always true for agents) |
