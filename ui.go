@@ -89,9 +89,9 @@ func (o *Object) drawButton(screen *ebiten.Image, left, top float64) {
 	h := float32(o.h)
 	const edge = 4
 
-	vector.FillRect(screen, x, y, w, h, o.fill, false)
-	light := shade(o.fill, 2.1)
-	dark := shade(o.fill, 0.45)
+	vector.FillRect(screen, x, y, w, h, o.shaded(o.fill), false)
+	light := o.shaded(shade(o.fill, 2.1))
+	dark := o.shaded(shade(o.fill, 0.45))
 	vector.FillRect(screen, x, y, w, edge, light, false)
 	vector.FillRect(screen, x, y, edge, h, light, false)
 	vector.FillRect(screen, x, y+h-edge, w, edge, dark, false)
@@ -101,6 +101,6 @@ func (o *Object) drawButton(screen *ebiten.Image, left, top float64) {
 	tw, th := text.Measure(o.textStr, face, 0)
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(left+o.w/2-tw/2, top+o.h/2-th/2)
-	op.ColorScale.ScaleWithColor(o.textColor)
+	op.ColorScale = o.colorScale(o.textColor)
 	text.Draw(screen, o.textStr, face, op)
 }

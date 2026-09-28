@@ -1,12 +1,16 @@
 // Horde: survive the night on a field far bigger than the window.
-// WASD or arrows move the hero; chasers pour in from beyond the edges
-// of the screen, wherever the hero goes.
+// WASD or arrows move the hero, who throws a dart the way they face
+// every 0.3 seconds; chasers pour in from beyond the edges of the
+// screen, wherever the hero goes, and take three darts to fall.
 //
 // This example proves the camera: the scene follows the hero across the
 // world with Camera, while the HUD and the ground color stay pinned to
 // the screen with Fixed. Layers keep the drawing readable: scenery at
-// the bottom, then chasers, the hero, and the HUD on top, whatever
-// order they spawn in.
+// the bottom, then chasers, darts, the hero, and the HUD on top,
+// whatever order they spawn in. And it proves the drawing effects: the
+// hero and chasers face their way with FlipX, darts fly Rotated along
+// their path, chasers come in Tinted variants, Flash white when hit
+// and fade out with Alpha when they fall.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -28,6 +32,7 @@ const (
 const (
 	layerScenery = iota
 	layerChasers
+	layerDarts
 	layerHero
 	layerHUD
 )
@@ -46,13 +51,15 @@ func main() {
 		play.Add(engine.Sprite(scenery[rand.IntN(len(scenery))]).At(x, y).Visual())
 	}
 
-	hero := play.Add(engine.Rect(36, 48, nil).At(0, 0).Tag("player").Layer(layerHero).
-		Animation("walk", "sprites/hero.png", 2, 8).
+	hero := play.Add(engine.Rect(42, 42, nil).At(0, 0).Tag("player").Layer(layerHero).
+		Animation("walk", "sprites/hero.png", 4, 10).
 		Animation("idle", "sprites/idle.png", 1, 1))
 	hero.Play("idle")
 	clock := play.Add(engine.Text("0 S").At(400, 30).Font(font).TextSize(16).Fixed().Layer(layerHUD))
+	tally := play.Add(engine.Text("KILLS 0").At(700, 30).Font(font).TextSize(16).Fixed().Layer(layerHUD))
 
-	survived := 0.0
+	survived, kills := 0.0, 0
+	facing := 0.0 // radians, the way the hero last moved
 	hero.OnUpdate(func(dt float64) {
 		dx, dy := 0.0, 0.0
 		if g.Key(engine.A) || g.Key(engine.Left) {
@@ -70,6 +77,10 @@ func main() {
 		if d := math.Hypot(dx, dy); d > 0 {
 			hero.Move(dx/d*210*dt, dy/d*210*dt)
 			hero.Play("walk")
+			facing = math.Atan2(dy, dx)
+			if dx != 0 {
+				hero.FlipX(dx < 0) // the sprite faces right
+			}
 		} else {
 			hero.Play("idle")
 		}
@@ -81,15 +92,52 @@ func main() {
 		clock.SetText(fmt.Sprintf("%.0f S", survived))
 	})
 
-	// Chasers appear on a ring just outside the view, around the hero.
+	// Darts fly the way the hero faces, drawn turned to their path.
+	play.Every(0.3, func() {
+		d := play.Add(engine.Sprite("sprites/dart.png").At(hero.X, hero.Y).
+			Tag("dart").Layer(layerDarts).Rotate(facing))
+		d.Vx, d.Vy = math.Cos(facing)*520, math.Sin(facing)*520
+		d.LifeTime(1)
+	})
+
+	// Chasers appear on a ring just outside the view, around the hero,
+	// in three tints of one sprite, with 3 hit points each.
+	tints := []engine.Color{nil, engine.Yellow, engine.Orange}
 	play.Every(0.6, func() {
 		a := rand.Float64() * 2 * math.Pi
 		c := play.Add(engine.Rect(36, 48, nil).
 			At(hero.X+math.Cos(a)*560, hero.Y+math.Sin(a)*560).Tag("chaser").Layer(layerChasers).
+			Tint(tints[rand.IntN(len(tints))]).
 			Animation("walk", "sprites/chaser.png", 2, 5))
 		c.Play("walk")
+		c.Data = 3
 		speed := 70 + rand.Float64()*60
-		c.OnUpdate(func(dt float64) { c.MoveToward(hero.X, hero.Y, speed*dt) })
+		fade := 1.0
+		c.OnUpdate(func(dt float64) {
+			if c.Data.(int) <= 0 { // fallen: fade out, then vanish
+				fade -= dt / 0.3
+				c.Alpha(fade)
+				if fade <= 0 {
+					c.Destroy()
+				}
+				return
+			}
+			c.FlipX(hero.X < c.X)
+			c.MoveToward(hero.X, hero.Y, speed*dt)
+		})
+	})
+
+	play.OnCollision("chaser", "dart", func(c, d *engine.Object) {
+		d.Destroy()
+		c.Flash(engine.White, 0.08)
+		c.Move(d.Vx*0.03, d.Vy*0.03) // knocked back along the dart's path
+		g.Sound("audios/hit.wav")
+		c.Data = c.Data.(int) - 1
+		if c.Data.(int) == 0 {
+			c.Tag("fallen") // no longer deadly, no longer a target
+			kills++
+			tally.SetText(fmt.Sprintf("KILLS %d", kills))
+		}
 	})
 
 	// --- Game over ---
@@ -99,13 +147,13 @@ func main() {
 	result := over.Add(engine.Text("").At(400, 280).Font(font).TextSize(16))
 	over.Add(engine.Button("AGAIN").At(400, 420).Font(font).TextSize(18).Color(engine.Green)).
 		OnClick(func() {
-			survived = 0
+			survived, kills, facing = 0, 0, 0
 			g.Restart("play")
 		})
 
 	hero.OnCollisionWith("chaser", func(*engine.Object) {
 		g.Sound("audios/hurt.wav")
-		result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS", survived))
+		result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS, %d KILLS", survived, kills))
 		g.Go("over")
 	})
 

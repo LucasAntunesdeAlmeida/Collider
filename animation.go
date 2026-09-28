@@ -75,6 +75,9 @@ func (a *animation) load(g *Game, o *Object) {
 // animate advances the active animation; runs every frame from the
 // scene update.
 func (o *Object) animate(dt float64) {
+	if o.flashLeft > 0 {
+		o.flashLeft -= dt
+	}
 	if o.curAnim == "" {
 		return
 	}

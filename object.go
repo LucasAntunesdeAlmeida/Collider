@@ -5,7 +5,6 @@ import (
 	"math/rand/v2"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/LucasAntunesdeAlmeida/collider/internal/physics"
 )
@@ -34,11 +33,21 @@ type Object struct {
 	img        *ebiten.Image
 	fill       Color
 
-	isText    bool
-	isButton  bool
-	visual    bool
-	fixed     bool
-	layer     int
+	isText   bool
+	isButton bool
+	visual   bool
+	fixed    bool
+	layer    int
+
+	// Drawing effects. alpha is stored as transparency (1 - opacity)
+	// so the zero value draws fully opaque.
+	alpha      float64
+	tint       Color
+	rotation   float64
+	flipX      bool
+	flashColor Color
+	flashLeft  float64
+
 	textStr   string
 	fontPath  string
 	textSize  float64
@@ -70,6 +79,10 @@ type objState struct {
 	life         float64
 	hasLife      bool
 	layer        int
+	alpha        float64
+	tint         Color
+	rotation     float64
+	flipX        bool
 }
 
 // Sprite creates an object from an image file. The collider defaults to
@@ -268,6 +281,10 @@ func (o *Object) saveState() {
 		life:       o.life,
 		hasLife:    o.hasLife,
 		layer:      o.layer,
+		alpha:      o.alpha,
+		tint:       o.tint,
+		rotation:   o.rotation,
+		flipX:      o.flipX,
 	}
 }
 
@@ -285,6 +302,9 @@ func (o *Object) restoreState() {
 	o.life = s.life
 	o.hasLife = s.hasLife
 	o.layer = s.layer
+	o.alpha, o.tint = s.alpha, s.tint
+	o.rotation, o.flipX = s.rotation, s.flipX
+	o.flashLeft = 0
 	o.dead = false
 	o.grounded = false
 }
@@ -295,35 +315,4 @@ func (o *Object) box() physics.Box {
 
 func (o *Object) contains(x, y float64) bool {
 	return physics.Contains(o.box(), x, y)
-}
-
-// draw renders the object with its top-left corner at its position
-// minus the view origin (vx, vy): the camera shift, or zero for Fixed
-// objects.
-func (o *Object) draw(screen *ebiten.Image, vx, vy float64) {
-	img := o.img
-	if f := o.animFrame(); f != nil {
-		img = f
-	}
-	left, top := o.X-o.w/2-vx, o.Y-o.h/2-vy
-	switch {
-	case o.isText:
-		o.drawText(screen, left, top)
-	case o.isButton:
-		o.drawButton(screen, left, top)
-	case img != nil:
-		op := &ebiten.DrawImageOptions{}
-		b := img.Bounds()
-		iw, ih := float64(b.Dx()), float64(b.Dy())
-		if iw != o.w || ih != o.h {
-			op.GeoM.Scale(o.w/iw, o.h/ih)
-		}
-		op.GeoM.Translate(left, top)
-		screen.DrawImage(img, op)
-	case o.fill != nil:
-		vector.FillRect(screen,
-			float32(left), float32(top),
-			float32(o.w), float32(o.h),
-			o.fill, false)
-	}
 }

@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade) |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -325,6 +325,11 @@ does not exist. That is the point.
 | `o.Grounded() bool` | Resting on a solid (platformers) |
 | `o.SetText(s)` / `o.SetSprite(path)` | Change content at runtime |
 | `o.Play(name)` / `o.PlayOnce(name)` | Switch animations (loop / hold last frame) |
+| `.Alpha(a)` | Opacity, 0 (invisible) to 1 (opaque, the default): fades, ghosts |
+| `.Tint(c)` | Multiply the colors by c (nil clears): color variants of one sprite |
+| `o.Flash(c, sec)` | Draw a solid silhouette of color c for sec seconds (hit flash) |
+| `.Rotate(rad)` | Draw turned around the center, clockwise; the collider stays upright |
+| `.FlipX(on)` | Draw mirrored horizontally (face the way you walk); drawing only |
 | `o.LifeTime(sec)` | Auto-destroy after n seconds |
 | `o.Destroy()` | Remove from scene (safe inside callbacks; applied at end of frame) |
 | `o.OnUpdate(fn(dt))` | Per-frame logic |

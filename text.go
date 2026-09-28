@@ -99,11 +99,9 @@ func (o *Object) measureText() {
 	o.w, o.h = w, h
 }
 
-func (o *Object) drawText(screen *ebiten.Image, left, top float64) {
+func (o *Object) drawText(screen *ebiten.Image, vx, vy float64) {
 	op := &text.DrawOptions{}
-	op.GeoM.Translate(left, top)
-	if o.textColor != nil {
-		op.ColorScale.ScaleWithColor(o.textColor)
-	}
+	op.GeoM = o.geoM(vx, vy, o.w, o.h)
+	op.ColorScale = o.colorScale(o.textColor)
 	text.Draw(screen, o.textStr, o.fontFace(), op)
 }
