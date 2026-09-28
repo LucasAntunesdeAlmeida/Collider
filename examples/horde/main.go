@@ -1,7 +1,8 @@
 // Horde: survive the night on a field far bigger than the window.
-// WASD or arrows move the hero, who throws a dart the way they face
-// every 0.3 seconds; chasers pour in from beyond the edges of the
-// screen, wherever the hero goes, and take three darts to fall.
+// WASD or arrows move the hero, who throws a dart every 0.3 seconds at
+// the nearest chaser (or the way they face); chasers pour in from
+// beyond the edges of the screen, wherever the hero goes, take three
+// darts to fall, and wear the hero's health down while they touch.
 //
 // This example proves the camera: the scene follows the hero across the
 // world with Camera, while the HUD and the ground color stay pinned to
@@ -10,7 +11,9 @@
 // whatever order they spawn in. And it proves the drawing effects: the
 // hero and chasers face their way with FlipX, darts fly Rotated along
 // their path, chasers come in Tinted variants, Flash white when hit
-// and fade out with Alpha when they fall.
+// and fade out with Alpha when they fall. Area queries do the rest:
+// Near aims the darts, Touching deals contact damage every moment a
+// chaser is on the hero, not just when contact begins.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -24,8 +27,10 @@ import (
 )
 
 const (
-	font  = "fonts/pixel.ttf"
-	field = 2000.0 // the world spans -field..field on both axes
+	font   = "fonts/pixel.ttf"
+	field  = 2000.0 // the world spans -field..field on both axes
+	maxHP  = 5
+	barLen = 200.0
 )
 
 // Draw layers, bottom to top.
@@ -57,9 +62,12 @@ func main() {
 	hero.Play("idle")
 	clock := play.Add(engine.Text("0 S").At(400, 30).Font(font).TextSize(16).Fixed().Layer(layerHUD))
 	tally := play.Add(engine.Text("KILLS 0").At(700, 30).Font(font).TextSize(16).Fixed().Layer(layerHUD))
+	play.Add(engine.Rect(barLen+4, 16, engine.Black).At(130, 30).Fixed().Layer(layerHUD))
+	bar := play.Add(engine.Rect(barLen, 12, engine.Red).At(130, 30).Fixed().Layer(layerHUD))
 
-	survived, kills := 0.0, 0
+	survived, kills, hp := 0.0, 0, maxHP
 	facing := 0.0 // radians, the way the hero last moved
+	safe := 0.0   // seconds of invulnerability left after a hit
 	hero.OnUpdate(func(dt float64) {
 		dx, dy := 0.0, 0.0
 		if g.Key(engine.A) || g.Key(engine.Left) {
@@ -92,11 +100,16 @@ func main() {
 		clock.SetText(fmt.Sprintf("%.0f S", survived))
 	})
 
-	// Darts fly the way the hero faces, drawn turned to their path.
+	// Darts fly at the nearest chaser in range, or the way the hero
+	// faces, drawn turned to their path.
 	play.Every(0.3, func() {
+		aim := facing
+		if near := play.Near("chaser", hero.X, hero.Y, 450); len(near) > 0 {
+			aim = math.Atan2(near[0].Y-hero.Y, near[0].X-hero.X)
+		}
 		d := play.Add(engine.Sprite("sprites/dart.png").At(hero.X, hero.Y).
-			Tag("dart").Layer(layerDarts).Rotate(facing))
-		d.Vx, d.Vy = math.Cos(facing)*520, math.Sin(facing)*520
+			Tag("dart").Layer(layerDarts).Rotate(aim))
+		d.Vx, d.Vy = math.Cos(aim)*520, math.Sin(aim)*520
 		d.LifeTime(1)
 	})
 
@@ -147,14 +160,31 @@ func main() {
 	result := over.Add(engine.Text("").At(400, 280).Font(font).TextSize(16))
 	over.Add(engine.Button("AGAIN").At(400, 420).Font(font).TextSize(18).Color(engine.Green)).
 		OnClick(func() {
-			survived, kills, facing = 0, 0, 0
+			survived, kills, hp, facing, safe = 0, 0, maxHP, 0, 0
 			g.Restart("play")
 		})
 
-	hero.OnCollisionWith("chaser", func(*engine.Object) {
+	// Contact damage: every moment a chaser touches the hero, not just
+	// the first, with a short blinking grace after each hit.
+	hero.OnUpdate(func(dt float64) {
+		safe -= dt
+		if safe > 0 {
+			hero.Alpha(0.35 + 0.65*float64(int(safe*20)%2))
+			return
+		}
+		hero.Alpha(1)
+		if len(hero.Touching("chaser")) == 0 {
+			return
+		}
+		hp--
+		safe = 0.5
+		w := barLen * float64(hp) / maxHP
+		bar.Size(w, 12).At(30+w/2, 30) // shrinks toward its left end
 		g.Sound("audios/hurt.wav")
-		result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS, %d KILLS", survived, kills))
-		g.Go("over")
+		if hp == 0 {
+			result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS, %d KILLS", survived, kills))
+			g.Go("over")
+		}
 	})
 
 	g.Run("play")

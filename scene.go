@@ -42,6 +42,9 @@ type Scene struct {
 	// order is the draw list, rebuilt every frame and reused so drawing
 	// allocates nothing.
 	order []*Object
+
+	// index serves Near and Touching (see query.go).
+	index queryIndex
 }
 
 type pair [2]*Object
@@ -190,6 +193,7 @@ func (s *Scene) restart() {
 		o.restoreState()
 	}
 	s.touching = map[pair]struct{}{}
+	s.index.invalidate()
 	kept := s.timers[:0]
 	for _, t := range s.timers {
 		if t.initial {
@@ -204,6 +208,7 @@ func (s *Scene) restart() {
 // update runs one frame: input, timers, per-object logic, motion,
 // collisions, solid resolution, cleanup.
 func (s *Scene) update(dt float64) {
+	s.index.invalidate()
 	s.clicks()
 	s.tick(dt)
 
@@ -240,6 +245,7 @@ func (s *Scene) update(dt float64) {
 			}
 		}
 	}
+	s.index.invalidate() // everything moved
 
 	s.collide()
 	s.resolveSolids()
@@ -390,6 +396,7 @@ func (s *Scene) flush() {
 		s.objects[i] = nil
 	}
 	s.objects = alive
+	s.index.invalidate() // indices shifted
 }
 
 // drawOrder lists the live objects bottom to top: by layer, and in

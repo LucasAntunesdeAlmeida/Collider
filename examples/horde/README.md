@@ -3,9 +3,11 @@
 ![demo](demo.gif)
 
 Survive the night on a field far bigger than the screen. WASD or arrows
-move the hero, who throws a dart the way they face every 0.3 seconds;
-chasers pour in from just beyond the edges of the view, wherever the
-hero goes, and fall after three darts. One touch and the horde wins.
+move the hero, who throws a dart every 0.3 seconds at the nearest
+chaser (or the way they face, when none is in range); chasers pour in
+from just beyond the edges of the view, wherever the hero goes, and
+fall after three darts. Every moment a chaser touches the hero costs
+health; when the bar runs out, the horde wins.
 
 ```bash
 cd examples/horde
@@ -61,3 +63,29 @@ chaser.Alpha(fade)                                      // fade out when fallen
   knocks it back and plays a hit sound. Three hits and it re-tags to
   `"fallen"`, so it no longer kills the hero, then `Alpha` fades it
   out over 0.3 seconds before it is destroyed.
+
+## Area queries: aim and continuous contact
+
+```go
+if near := play.Near("chaser", hero.X, hero.Y, 450); len(near) > 0 {
+	aim = math.Atan2(near[0].Y-hero.Y, near[0].X-hero.X) // nearest first
+}
+if len(hero.Touching("chaser")) > 0 { // every frame of contact
+	hp--
+}
+```
+
+- `Scene.Near(tag, x, y, r)` returns the live objects with a tag whose
+  box overlaps a circle, closest center first. Each dart flies at
+  `near[0]`, the nearest chaser within 450 pixels; with none in range
+  it flies the way the hero faces. Visual objects count (a pickup
+  magnet can pull decoration-only gems); Fixed HUD objects never do.
+- `Object.Touching(tag)` returns what overlaps the object right now.
+  Collision events fire once, on enter, so a chaser standing on the
+  hero would hurt only once; `Touching` asks again every frame. Each
+  hit costs one of five health points, shown by a Fixed bar on the HUD
+  layer, then the hero blinks (`Alpha`) through half a second of
+  invulnerability.
+- Both run on a per-frame spatial grid the engine builds on the first
+  query, so asking every frame, for every dart or enemy, stays cheap
+  with hundreds of objects around.

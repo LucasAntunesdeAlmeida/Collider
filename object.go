@@ -113,6 +113,9 @@ func (o *Object) AtEdge() *Object {
 // Tag labels the object for tag-based collision rules. Chainable.
 func (o *Object) Tag(name string) *Object {
 	o.tag = name
+	if o.scene != nil {
+		o.scene.index.invalidate() // re-tagged mid-frame: Near and Touching see it now
+	}
 	return o
 }
 

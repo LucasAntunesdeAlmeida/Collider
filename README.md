@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade) |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage) |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -294,6 +294,7 @@ does not exist. That is the point.
 | `s.OnCollision(tagA, tagB, fn(a, b))` | Rule for every current and future pair |
 | `s.Count(tag) int` | How many objects with this tag are alive |
 | `s.Camera(x, y)` | Center the view on a world point (follow the player every frame) |
+| `s.Near(tag, x, y, r) []*Object` | Live objects with this tag whose box overlaps the circle, closest first (visual included, Fixed not) |
 
 ### Object: constructors and configuration (chainable)
 
@@ -336,6 +337,7 @@ does not exist. That is the point.
 | `o.OnClick(fn)` | Clicked (point-vs-bounds collision) |
 | `o.OnCollision(fn(other))` | Touching anything |
 | `o.OnCollisionWith(tag, fn(other))` | Touching anything with this tag |
+| `o.Touching(tag) []*Object` | What overlaps o right now, with this tag (continuous contact; never visual) |
 
 ---
 
@@ -345,7 +347,8 @@ does not exist. That is the point.
    is removed at the end of the frame, never mid-iteration.
 2. **Collision events fire on *enter*.** `OnCollision` fires once when contact
    begins, not on every frame of overlap. Continuous contact (standing on the
-   floor) is one event.
+   floor) is one event. To act on every frame of contact (damage over
+   time), ask `o.Touching(tag)` instead.
 3. **Solid vs trigger is the whole physics story.** `Solid()` objects push
    others out; everything else just reports contact. No forces, no torque,
    no restitution. If your game needs Angry Birds physics, this is not its
