@@ -31,6 +31,10 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # Browser builds compile platform files of their own (save_js.go).
+      - name: Vet and build for the browser
+        run: GOOS=js GOARCH=wasm go vet . && GOOS=js GOARCH=wasm go build ./...
+
       - name: Staticcheck
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@latest

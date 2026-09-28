@@ -53,6 +53,9 @@ type Game struct {
 
 	rec    *record.Recorder
 	recBuf []byte
+
+	// memSaves holds Save data for agent and test runs (see Save).
+	memSaves map[string][]byte
 }
 
 // New creates a game with a window title and size in pixels.

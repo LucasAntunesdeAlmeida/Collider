@@ -1,39 +1,58 @@
-﻿# Catcher (save system)
+# Catcher (save system)
 
 ![demo](demo.gif)
 
 Catch falling gems with the paddle for 30 seconds. Your best score is
-saved to `save.json` and greets you on the next run.
+saved and greets you on the next run, on desktop and in the browser.
 
 ```bash
 cd examples/catcher
 go run .
 ```
 
-The paddle follows the mouse. Delete `save.json` to reset progress.
+The paddle follows the mouse.
 
-## What this example proves
-
-**A save system needs nothing from the engine.** The whole persistence
-layer is ~15 lines of plain Go:
+## What this example proves: save data
 
 ```go
 type saveData struct {
     Best int `json:"best"`
 }
 
-func load() saveData { /* os.ReadFile + json.Unmarshal, zero on first run */ }
-func (s saveData) write() { /* json.MarshalIndent + os.WriteFile */ }
+var state saveData
+g.Load("save", &state)       // at startup; false on the first run
+...
+if err := g.Save("save", state); err != nil { // on a new record
+    record.SetText("NEW BEST (NOT SAVED)")
+}
 ```
+
+- `g.Save(key, v)` stores any JSON-encodable value under a key;
+  `g.Load(key, &v)` reads it back and reports whether it did. A missing
+  key (the first run) or data that no longer decodes returns false and
+  leaves `v` untouched, so defaults set before `Load` survive.
+- **Why this is in the engine.** An earlier version of this example
+  saved with `os.WriteFile` and claimed a save system needs no engine
+  support. That holds on desktop only: a browser build (WebAssembly,
+  see [PUBLISHING.md](../../PUBLISHING.md)) has no filesystem, so the
+  same code silently forgot every record on itch.io. The engine now
+  picks the storage for the platform: on desktop a file per key in the
+  user's config directory (`%AppData%\Catcher\save.json` on Windows,
+  `~/.config/Catcher/save.json` on Linux, `~/Library/Application
+  Support/Catcher/save.json` on macOS), written atomically; in the
+  browser, `localStorage` under `Catcher/save`.
+- **Agents and tests never touch your saves.** Headless runs, MCP
+  agents, Autopilot and `go test` keep saves in memory, so a bot
+  playing a thousand rounds does not overwrite the player's best.
 
 Design points worth copying:
 
 - **Load once at startup, save at the moment that matters** (a new
   record), not every frame.
-- **Extend `saveData` freely**: old save files keep loading, missing
-  fields stay zero. That is versioning for free.
-- **First run is not an error**: a missing file just returns zero values.
+- **Extend `saveData` freely**: old saves keep loading, and fields they
+  lack keep the values they had before `Load`. That is versioning for
+  free.
+- **First run is not an error**: `Load` just returns false.
 
-This settles the roadmap question of whether Collider needs `g.Save` /
-`g.Load`: it does not. An engine wrapper would hide three standard
-library calls without making any line count lower.
+To reset progress, delete the `Catcher` folder in your config
+directory (or clear the site data in the browser).

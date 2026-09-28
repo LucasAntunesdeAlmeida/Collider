@@ -150,7 +150,7 @@ go run .
 | [Runner](examples/runner/) | Endless runner | Sprite sheet animations (run/jump/death), moving-world auto-scroll |
 | [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect |
 | [Dungeon](examples/dungeon/) | Dungeon crawler | Multiple screens: ASCII room layouts, edge transitions, key and lock |
-| [Catcher](examples/catcher/) | Arcade | Save system with plain encoding/json, no engine API needed |
+| [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load` |
 | [Ship](examples/ship/) | Arcade | Publishing: embedded assets, fullscreen/resizable/icon, exe and browser builds |
 | [Gem Rush](examples/agent/) | Arcade | Agents only: no human input; played by its own pilot, headless bots, or MCP agents |
 
@@ -281,6 +281,8 @@ does not exist. That is the point.
 | `g.Focused() bool` | Does the window have focus? Pause when the player switches away (always true for agents) |
 | `g.Sound(path)` | Fire-and-forget sound effect |
 | `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after |
+| `g.Save(key, v) error` | Persist a JSON-encodable value (file on desktop, localStorage in the browser, memory for agents and tests) |
+| `g.Load(key, &v) bool` | Read it back; false (v untouched) when missing or undecodable |
 | `g.Quit()` | Exit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
 | `g.Headless(scene)` / `g.Step(action)` / `g.Observe()` | Agent play, headless and deterministic |

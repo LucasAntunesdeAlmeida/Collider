@@ -1,52 +1,36 @@
 // Catcher: catch falling gems with the basket for 30 seconds. Your
-// best score is saved to save.json and greets you on the next run.
+// best score is saved and greets you on the next run, on desktop and
+// in the browser alike.
 //
-// This example proves a save system, and proves it needs no engine
-// support: loading and saving is ~15 lines of plain encoding/json.
+// This example proves the save system: g.Load at startup, g.Save at
+// the moment it matters. Values are plain JSON-encodable Go values.
 //
 // Run from this folder: cd examples/catcher && go run .
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand/v2"
-	"os"
 
 	engine "github.com/LucasAntunesdeAlmeida/collider"
 )
 
 const (
 	font      = "fonts/pixel.ttf"
-	saveFile  = "save.json"
 	roundTime = 30.0
 )
 
-// saveData is everything the game persists. Extend it and old files
-// keep loading: missing fields just stay zero.
+// saveData is everything the game persists. Extend it and old saves
+// keep loading: missing fields keep the values they had before Load.
 type saveData struct {
 	Best int `json:"best"`
 }
 
-func load() saveData {
-	var s saveData
-	b, err := os.ReadFile(saveFile)
-	if err != nil {
-		return s // first run: zero values
-	}
-	json.Unmarshal(b, &s)
-	return s
-}
-
-func (s saveData) write() {
-	b, _ := json.MarshalIndent(s, "", "  ")
-	os.WriteFile(saveFile, b, 0o644)
-}
-
 func main() {
-	state := load()
-
 	g := engine.New("Catcher", 800, 600)
+
+	var state saveData
+	g.Load("save", &state) // false on the first run: state stays zero
 
 	// --- Menu ---
 	menu := g.Scene("menu")
@@ -102,9 +86,12 @@ func main() {
 			result.SetText(fmt.Sprintf("YOU CAUGHT %d GEMS", score))
 			if score > state.Best {
 				state.Best = score
-				state.write() // the actual save, at the moment it matters
 				title.SetText("RECORD")
 				record.SetText("NEW BEST SAVED")
+				// The actual save, at the moment it matters.
+				if err := g.Save("save", state); err != nil {
+					record.SetText("NEW BEST (NOT SAVED)")
+				}
 			} else {
 				title.SetText("TIME")
 				record.SetText(fmt.Sprintf("BEST %d", state.Best))
