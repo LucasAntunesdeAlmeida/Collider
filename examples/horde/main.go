@@ -17,7 +17,7 @@
 // a "pause" scene opens as an Overlay on top of the frozen night, and
 // so does switching to another window (Focused). On a touch screen, or
 // with the mouse, press and drag anywhere to steer: MouseDown drives a
-// virtual joystick.
+// virtual joystick. M mutes and unmutes everything with Volume.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -190,21 +190,47 @@ func main() {
 		}
 	})
 
-	// Esc or P pauses and resumes. g.Key reports a held key, and a
-	// press lasts several frames, so acting on "held" would open and
-	// close the pause every frame. pressed remembers last frame's state
-	// (shared by both scenes, since only one updates per frame) and is
-	// true on the press only.
-	wasDown := false
-	pressed := func() bool {
-		down := g.Key(engine.Esc) || g.Key(engine.P)
-		edge := down && !wasDown
-		wasDown = down
-		return edge
+	// g.Key reports a held key, and a press lasts several frames, so
+	// toggling on "held" would flip the pause (or the sound) every
+	// frame. edge remembers last frame's state and answers true on the
+	// press only. Each checker is shared by both scenes, since only one
+	// of them updates per frame.
+	edge := func(keys ...engine.Key) func() bool {
+		was := false
+		return func() bool {
+			down := false
+			for _, k := range keys {
+				down = down || g.Key(k)
+			}
+			hit := down && !was
+			was = down
+			return hit
+		}
 	}
+	pausePressed, mutePressed := edge(engine.Esc, engine.P), edge(engine.M)
+
+	// M mutes and unmutes: sound effects and the music, at once.
+	mutedLabel := play.Add(engine.Text("MUTED").At(700, 60).Font(font).TextSize(12).
+		TextColor(engine.Yellow).Fixed().Layer(layerHUD).Alpha(0))
+	muted := false
+	muteKey := func() {
+		if !mutePressed() {
+			return
+		}
+		muted = !muted
+		if muted {
+			g.Volume(0)
+			mutedLabel.Alpha(1)
+		} else {
+			g.Volume(1)
+			mutedLabel.Alpha(0)
+		}
+	}
+
 	play.OnUpdate(func(float64) {
-		// Switching to another window pauses too.
-		if pressed() || !g.Focused() {
+		muteKey()
+		// Esc or P pauses; switching to another window pauses too.
+		if pausePressed() || !g.Focused() {
 			g.Overlay("pause")
 		}
 	})
@@ -256,7 +282,8 @@ func main() {
 	pause.Add(engine.Button("GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red)).
 		OnClick(lose) // Go closes the overlay too
 	pause.OnUpdate(func(float64) {
-		if pressed() {
+		muteKey()
+		if pausePressed() {
 			g.CloseOverlay()
 		}
 	})

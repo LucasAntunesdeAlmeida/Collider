@@ -19,6 +19,10 @@ type Cache struct {
 	images map[string]*ebiten.Image
 	files  map[string][]byte
 	sounds map[string][]byte
+
+	// volume is the master volume, 0..1, applied to every player the
+	// cache starts.
+	volume float64
 }
 
 func NewCache() *Cache {
@@ -26,7 +30,28 @@ func NewCache() *Cache {
 		images: map[string]*ebiten.Image{},
 		files:  map[string][]byte{},
 		sounds: map[string][]byte{},
+		volume: 1,
 	}
+}
+
+// SetVolume sets the master volume, clamped to 0..1, for every sound
+// and music player started from now on, and returns the stored value.
+func (c *Cache) SetVolume(v float64) float64 {
+	v = min(1, max(0, v))
+	if v != v { // NaN
+		v = 0
+	}
+	c.mu.Lock()
+	c.volume = v
+	c.mu.Unlock()
+	return v
+}
+
+// Volume returns the master volume.
+func (c *Cache) Volume() float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.volume
 }
 
 // Image returns the cached image for a path, loading it on first use.

@@ -9,7 +9,7 @@ from just beyond the edges of the view, wherever the hero goes, and
 fall after three darts. Every moment a chaser touches the hero costs
 health; when the bar runs out, the horde wins. Esc or P pauses, and
 so does switching to another window. No keyboard? Press anywhere and
-drag to steer.
+drag to steer. M mutes.
 
 ```bash
 cd examples/horde
@@ -101,7 +101,7 @@ pause.Add(engine.Button("RESUME").At(400, 320)).OnClick(g.CloseOverlay)
 pause.Add(engine.Button("GIVE UP").At(400, 410)).OnClick(lose) // Go closes it too
 
 play.OnUpdate(func(float64) {
-	if pressed() { // Esc or P, on the press only
+	if pausePressed() { // Esc or P, on the press only
 		g.Overlay("pause")
 	}
 })
@@ -125,18 +125,24 @@ the very next frame because Esc is still down. The example remembers
 the previous frame's state and acts only on the press:
 
 ```go
-wasDown := false
-pressed := func() bool {
-	down := g.Key(engine.Esc) || g.Key(engine.P)
-	edge := down && !wasDown
-	wasDown = down
-	return edge
+edge := func(keys ...engine.Key) func() bool {
+	was := false
+	return func() bool {
+		down := false
+		for _, k := range keys {
+			down = down || g.Key(k)
+		}
+		hit := down && !was
+		was = down
+		return hit
+	}
 }
+pausePressed, mutePressed := edge(engine.Esc, engine.P), edge(engine.M)
 ```
 
-Both scenes call the same `pressed`, so the state carries across the
-switch (only one of them updates each frame): holding Esc pauses once,
-and the next press resumes.
+Both scenes call the same `pausePressed`, so the state carries across
+the switch (only one of them updates each frame): holding Esc pauses
+once, and the next press resumes.
 
 ## Held pointer: a virtual joystick
 
@@ -176,3 +182,24 @@ the player alt-tabs away (or switches browser tabs), the night pauses
 itself instead of killing them off screen, and stays paused until they
 choose RESUME. Headless and agent play are always focused, so bots and
 MCP agents never get paused by a window they do not have.
+
+## Volume: a mute key
+
+```go
+if mutePressed() {
+	muted = !muted
+	if muted {
+		g.Volume(0)
+	} else {
+		g.Volume(1)
+	}
+}
+```
+
+`g.Volume(v)` is the master volume, 0 (muted) to 1 (the default),
+clamped. It changes the music that is already playing at once, and
+every sound effect and track started afterwards, so one call mutes the
+whole game. M toggles it in play and in the pause menu (the same
+`edge` detector as the pause key), and a small `Fixed` "MUTED" label
+on the HUD shows it is off. A settings slider would pass any value in
+between.

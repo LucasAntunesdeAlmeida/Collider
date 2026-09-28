@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); an overlay pause menu; a drag joystick and pause on focus loss |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); an overlay pause menu; a drag joystick and pause on focus loss; a mute key |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -280,6 +280,7 @@ does not exist. That is the point.
 | `g.MouseDown() bool` | Is the left button (or any finger) held? Drags, virtual joysticks |
 | `g.Focused() bool` | Does the window have focus? Pause when the player switches away (always true for agents) |
 | `g.Sound(path)` | Fire-and-forget sound effect |
+| `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after |
 | `g.Quit()` | Exit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
 | `g.Headless(scene)` / `g.Step(action)` / `g.Observe()` | Agent play, headless and deterministic |

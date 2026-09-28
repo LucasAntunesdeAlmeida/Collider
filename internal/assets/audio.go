@@ -66,9 +66,15 @@ func (c *Cache) PlaySound(path string) {
 		}
 		c.sounds[path] = pcm
 	}
+	vol := c.volume
 	c.mu.Unlock()
 
-	context().NewPlayerFromBytes(pcm).Play()
+	if vol == 0 {
+		return // muted: do not even start a player
+	}
+	p := context().NewPlayerFromBytes(pcm)
+	p.SetVolume(vol)
+	p.Play()
 }
 
 // PlayMusic starts a path looping forever and returns the player, so
@@ -76,6 +82,7 @@ func (c *Cache) PlaySound(path string) {
 func (c *Cache) PlayMusic(path string) *audio.Player {
 	c.mu.Lock()
 	data := c.fileLocked(path)
+	vol := c.volume
 	c.mu.Unlock()
 
 	stream := decodeAudio(path, bytes.NewReader(data))
@@ -84,6 +91,7 @@ func (c *Cache) PlayMusic(path string) *audio.Player {
 	if err != nil {
 		panic("collider: cannot play music " + path + ": " + err.Error())
 	}
+	p.SetVolume(vol)
 	p.Play()
 	return p
 }

@@ -134,6 +134,18 @@ func (g *Game) Sound(path string) {
 	g.assets.PlaySound(path)
 }
 
+// Volume sets the master volume from 0 (muted) to 1 (full, the
+// default); values outside are clamped. It applies to the music that is
+// playing right away, and to every sound effect and music started
+// afterwards. Callable any time, including from an input handler for a
+// mute key.
+func (g *Game) Volume(v float64) {
+	v = g.assets.SetVolume(v)
+	if g.musicPlayer != nil {
+		g.musicPlayer.SetVolume(v)
+	}
+}
+
 // Quit closes the window and returns from Run.
 func (g *Game) Quit() {
 	g.quit = true
