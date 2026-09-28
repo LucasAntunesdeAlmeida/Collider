@@ -7,7 +7,7 @@ move the hero, who throws a dart every 0.3 seconds at the nearest
 chaser (or the way they face, when none is in range); chasers pour in
 from just beyond the edges of the view, wherever the hero goes, and
 fall after three darts. Every moment a chaser touches the hero costs
-health; when the bar runs out, the horde wins.
+health; when the bar runs out, the horde wins. Esc or P pauses.
 
 ```bash
 cd examples/horde
@@ -89,3 +89,49 @@ if len(hero.Touching("chaser")) > 0 { // every frame of contact
 - Both run on a per-frame spatial grid the engine builds on the first
   query, so asking every frame, for every dart or enemy, stays cheap
   with hundreds of objects around.
+
+## Overlay: a pause menu over a frozen night
+
+```go
+pause := g.Scene("pause")
+pause.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Alpha(0.6).Fixed())
+pause.Add(engine.Button("RESUME").At(400, 320)).OnClick(g.CloseOverlay)
+pause.Add(engine.Button("GIVE UP").At(400, 410)).OnClick(lose) // Go closes it too
+
+play.OnUpdate(func(float64) {
+	if pressed() { // Esc or P, on the press only
+		g.Overlay("pause")
+	}
+})
+```
+
+- `g.Overlay("pause")` shows the pause scene on top of the night.
+  The overlay runs normally (its buttons take the clicks), while the
+  night keeps drawing underneath, frozen: no chaser moves, no dart
+  flies, the clock and the spawn timers stop. `g.CloseOverlay()` picks
+  up exactly where it froze.
+- Both apply at the start of the next frame, like `g.Go`, so the press
+  that opened the pause is never also seen by the pause scene on the
+  same frame. `g.Go("over")` from GIVE UP closes the overlay on its
+  own.
+- The pause scene is an ordinary scene: it keeps its state between
+  openings and does not touch the music.
+
+**Edge detection.** `g.Key` answers "is it held?", and a press lasts
+several frames. Toggling on "held" would open the pause, then close it
+the very next frame because Esc is still down. The example remembers
+the previous frame's state and acts only on the press:
+
+```go
+wasDown := false
+pressed := func() bool {
+	down := g.Key(engine.Esc) || g.Key(engine.P)
+	edge := down && !wasDown
+	wasDown = down
+	return edge
+}
+```
+
+Both scenes call the same `pressed`, so the state carries across the
+switch (only one of them updates each frame): holding Esc pauses once,
+and the next press resumes.

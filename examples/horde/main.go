@@ -13,7 +13,8 @@
 // their path, chasers come in Tinted variants, Flash white when hit
 // and fade out with Alpha when they fall. Area queries do the rest:
 // Near aims the darts, Touching deals contact damage every moment a
-// chaser is on the hero, not just when contact begins.
+// chaser is on the hero, not just when contact begins. Esc or P pauses:
+// a "pause" scene opens as an Overlay on top of the frozen night.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -153,11 +154,33 @@ func main() {
 		}
 	})
 
+	// Esc or P pauses and resumes. g.Key reports a held key, and a
+	// press lasts several frames, so acting on "held" would open and
+	// close the pause every frame. pressed remembers last frame's state
+	// (shared by both scenes, since only one updates per frame) and is
+	// true on the press only.
+	wasDown := false
+	pressed := func() bool {
+		down := g.Key(engine.Esc) || g.Key(engine.P)
+		edge := down && !wasDown
+		wasDown = down
+		return edge
+	}
+	play.OnUpdate(func(float64) {
+		if pressed() {
+			g.Overlay("pause")
+		}
+	})
+
 	// --- Game over ---
 	over := g.Scene("over")
 
 	over.Add(engine.Text("THE HORDE WON").At(400, 200).Font(font).TextSize(32).TextColor(engine.Red))
 	result := over.Add(engine.Text("").At(400, 280).Font(font).TextSize(16))
+	lose := func() {
+		result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS, %d KILLS", survived, kills))
+		g.Go("over")
+	}
 	over.Add(engine.Button("AGAIN").At(400, 420).Font(font).TextSize(18).Color(engine.Green)).
 		OnClick(func() {
 			survived, kills, hp, facing, safe = 0, 0, maxHP, 0, 0
@@ -182,8 +205,22 @@ func main() {
 		bar.Size(w, 12).At(30+w/2, 30) // shrinks toward its left end
 		g.Sound("audios/hurt.wav")
 		if hp == 0 {
-			result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS, %d KILLS", survived, kills))
-			g.Go("over")
+			lose()
+		}
+	})
+
+	// --- Pause: an overlay. The night still draws underneath, frozen:
+	// no chaser moves, no timer ticks, until it closes. ---
+	pause := g.Scene("pause")
+	pause.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Alpha(0.6).Fixed())
+	pause.Add(engine.Text("PAUSED").At(400, 200).Font(font).TextSize(32))
+	pause.Add(engine.Button("RESUME").At(400, 320).Font(font).TextSize(18).Color(engine.Green)).
+		OnClick(g.CloseOverlay)
+	pause.Add(engine.Button("GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red)).
+		OnClick(lose) // Go closes the overlay too
+	pause.OnUpdate(func(float64) {
+		if pressed() {
+			g.CloseOverlay()
 		}
 	})
 

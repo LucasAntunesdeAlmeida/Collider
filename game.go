@@ -22,6 +22,13 @@ type Game struct {
 	next    *Scene
 	quit    bool
 
+	// overlay runs on top of current, which is frozen underneath (see
+	// Overlay). Opening and closing are deferred like scene switches:
+	// overlayPending says overlayNext (nil = close) applies next frame.
+	overlay        *Scene
+	overlayNext    *Scene
+	overlayPending bool
+
 	input     inputSource
 	headless  bool
 	agentsOff bool
@@ -71,17 +78,43 @@ func (g *Game) Scene(name string) *Scene {
 }
 
 // Go switches to another scene at the end of the current frame.
-// The scene keeps its state; use Restart to reset it.
+// The scene keeps its state; use Restart to reset it. Any open overlay
+// closes.
 func (g *Game) Go(name string) {
 	g.next = g.mustScene(name)
+	g.CloseOverlay()
 }
 
 // Restart switches to a scene after rolling it back to its initial
 // state: setup objects restored, runtime spawns and timers dropped.
+// Any open overlay closes.
 func (g *Game) Restart(name string) {
 	s := g.mustScene(name)
 	s.restart()
 	g.next = s
+	g.CloseOverlay()
+}
+
+// Overlay shows a scene on top of the current one: a pause menu, an
+// inventory, a level-up choice. The overlay runs (its timers, updates,
+// clicks and collisions) and draws above, while the scene under it
+// still draws but is frozen: no updates, no timers, no input. Like Go,
+// it takes effect at the start of the next frame, so the key or click
+// that opened it never reaches the overlay on the same frame. Opening
+// one while another is open replaces it. The overlay keeps its state
+// between openings (Restart it by hand if it should start fresh) and
+// never changes the music.
+func (g *Game) Overlay(name string) {
+	g.overlayNext = g.mustScene(name)
+	g.overlayPending = true
+}
+
+// CloseOverlay removes the overlay at the start of the next frame and
+// the scene under it resumes where it froze. Safe to call with no
+// overlay open. Go and Restart close the overlay too.
+func (g *Game) CloseOverlay() {
+	g.overlayNext = nil
+	g.overlayPending = true
 }
 
 func (g *Game) mustScene(name string) *Scene {
@@ -179,8 +212,10 @@ func (g *Game) Run(name string) {
 	}
 }
 
-// advance is one frame of game logic: scene switches, then the current
-// scene's update. Shared by the window loop and headless Step.
+// advance is one frame of game logic: scene switches and overlay
+// changes, then the update of whichever scene has control: the overlay
+// when one is open (the scene under it stays frozen), else the current
+// scene. Shared by the window loop and headless Step.
 func (g *Game) advance(dt float64) {
 	if g.next != nil {
 		g.current = g.next
@@ -190,7 +225,19 @@ func (g *Game) advance(dt float64) {
 			g.playMusic(g.current.musicPath)
 		}
 	}
-	if g.current != nil {
+	if g.overlayPending {
+		g.overlay, g.overlayNext, g.overlayPending = g.overlayNext, nil, false
+		if g.overlay == g.current {
+			g.overlay = nil // a scene cannot sit on top of itself
+		}
+		if g.overlay != nil {
+			g.overlay.activate()
+		}
+	}
+	switch {
+	case g.overlay != nil:
+		g.overlay.update(dt)
+	case g.current != nil:
 		g.current.update(dt)
 	}
 }
@@ -267,6 +314,9 @@ func (r *runner) Draw(screen *ebiten.Image) {
 	g := r.g
 	if g.current != nil {
 		g.current.draw(screen)
+	}
+	if g.overlay != nil {
+		g.overlay.draw(screen)
 	}
 	if g.rec != nil && g.rec.ShouldCapture() {
 		if g.recBuf == nil {

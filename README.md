@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage) |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); an overlay pause menu |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -175,6 +175,9 @@ motion, size and text (so HUDs and scores are readable):
 
 Positions are world coordinates; objects pinned to the screen with
 `Fixed` (a HUD) report screen coordinates and carry `"fixed": true`.
+While an overlay is open (a pause menu), `"overlay"` names it: it takes
+all input, and `objects` lists the frozen scene's objects, then the
+overlay's.
 
 Three optional calls make any game, however complex, fully
 agent-playable and self-describing:
@@ -268,6 +271,8 @@ does not exist. That is the point.
 | `g.Scene(name) *Scene` | Create (or fetch) a scene |
 | `g.Go(name)` | Switch scenes (state preserved) |
 | `g.Restart(name)` | Switch scenes, resetting it to its initial state |
+| `g.Overlay(name)` | Show a scene on top (pause, menus): it runs, the scene under it draws frozen |
+| `g.CloseOverlay()` | Remove the overlay; the scene under it resumes where it froze |
 | `g.Run(name)` | Start the loop on a scene (blocks) |
 | `g.Key(k) bool` | Is this key held? |
 | `g.Mouse() (x, y)` | Cursor position (a finger on a touch screen counts) |
@@ -363,4 +368,9 @@ does not exist. That is the point.
    as the mouse, so a game built for a mouse works on a phone without a
    second input path. A lifted finger leaves the cursor where it was, so
    anything following the cursor stays put until the next touch.
+7. **An overlay freezes the scene under it.** While `g.Overlay` is open,
+   only the overlay updates, ticks timers, takes clicks and collides;
+   the scene under it still draws but does not advance at all. Opening
+   and closing apply at the start of the next frame, like `g.Go`, and
+   `Go`/`Restart` close any overlay.
 

@@ -25,6 +25,7 @@ const (
 	D     = ebiten.KeyD
 	F     = ebiten.KeyF
 	R     = ebiten.KeyR
+	P     = ebiten.KeyP
 )
 
 // keyNames maps every keyboard key's name to its key, so agents can

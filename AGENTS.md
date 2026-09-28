@@ -72,7 +72,9 @@ Objects carry `tag`, position (`x`, `y` is the center), velocity
 scores and instructions are readable. The player is tagged `"player"`.
 Decorative scenery is filtered out for you. Positions are world
 coordinates; HUD objects pinned to the screen report screen coordinates
-and carry `"fixed": true`.
+and carry `"fixed": true`. While an overlay (a pause menu) is open,
+`"overlay"` names it: it takes all input, and the scene under it is
+frozen; its objects are listed first, then the overlay's.
 
 **Over MCP** (any client, or you via a subprocess): run a game with the
 `COLLIDER_AGENT=mcp` env var and its stdio becomes an MCP server with

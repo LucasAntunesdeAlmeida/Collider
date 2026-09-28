@@ -28,9 +28,12 @@ type Action struct {
 
 // Observation is the structured view of the current frame: the scene
 // name, every object with its position, motion and label, and whatever
-// extra state the game attached with AgentState.
+// extra state the game attached with AgentState. While an overlay is
+// open (a pause menu), Overlay names it and Objects lists the frozen
+// scene's objects first, then the overlay's.
 type Observation struct {
 	Scene   string      `json:"scene"`
+	Overlay string      `json:"overlay,omitempty"`
 	Objects []ObjectObs `json:"objects"`
 	State   any         `json:"state,omitempty"`
 }
@@ -151,19 +154,29 @@ func (g *Game) Observe() Observation {
 		return obs
 	}
 	obs.Scene = g.current.name
-	for _, o := range g.current.objects {
-		if o.dead || (o.visual && o.textStr == "") {
-			continue // scenery is noise for agents; text still matters
-		}
-		obs.Objects = append(obs.Objects, ObjectObs{
-			Tag: o.tag, X: o.X, Y: o.Y, Vx: o.Vx, Vy: o.Vy,
-			W: o.w, H: o.h, Solid: o.solid, Text: o.textStr, Fixed: o.fixed,
-		})
+	obs.Objects = g.current.observe(obs.Objects)
+	if g.overlay != nil {
+		obs.Overlay = g.overlay.name
+		obs.Objects = g.overlay.observe(obs.Objects)
 	}
 	if g.stateFn != nil {
 		obs.State = g.stateFn()
 	}
 	return obs
+}
+
+// observe appends the scene's live objects as agents see them.
+func (s *Scene) observe(out []ObjectObs) []ObjectObs {
+	for _, o := range s.objects {
+		if o.dead || (o.visual && o.textStr == "") {
+			continue // scenery is noise for agents; text still matters
+		}
+		out = append(out, ObjectObs{
+			Tag: o.tag, X: o.X, Y: o.Y, Vx: o.Vx, Vy: o.Vy,
+			W: o.w, H: o.h, Solid: o.solid, Text: o.textStr, Fixed: o.fixed,
+		})
+	}
+	return out
 }
 
 // controlNames lists declared control names, sorted for stable output.
@@ -242,7 +255,7 @@ func (g *Game) serveMCP() {
 		keysHelp = "this game's controls: [" + strings.Join(g.controlNames(), ", ") +
 			"] (raw keyboard key names also work)"
 	}
-	obsHelp := "Get the current game state: scene name and all objects (tag, position, velocity, size, text). The player object is usually tagged \"player\"."
+	obsHelp := "Get the current game state: scene name and all objects (tag, position, velocity, size, text). The player object is usually tagged \"player\". While an overlay (a pause menu) is open, \"overlay\" names it: it takes the input, and the scene under it is frozen."
 	if g.stateFn != nil {
 		obsHelp += " The \"state\" field carries game-specific state."
 	}
