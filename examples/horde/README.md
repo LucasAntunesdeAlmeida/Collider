@@ -92,6 +92,25 @@ if len(hero.Touching("chaser")) > 0 { // every frame of contact
   query, so asking every frame, for every dart or enemy, stays cheap
   with hundreds of objects around.
 
+## Hitbox: fair contact
+
+```go
+hero := play.Add(engine.Rect(42, 42, nil).Tag("player").Hitbox(24, 34))
+c := play.Add(engine.Rect(36, 48, nil).Tag("chaser").Hitbox(22, 40))
+```
+
+A sprite's box is rarely its body: the hero's 42x42 frame has empty
+corners and swinging arms, the chaser's arms reach out past its sides.
+With the sprite bounds as colliders, a chaser brushing past the hero's
+empty corner would cost health, which feels unfair. `Hitbox(w, h)`
+sets the collision box apart from the drawn size, centered on the
+object: collisions, `Touching`, `Near`, solids, and the `w`/`h` agents
+observe all use it, while drawing (and view culling) keeps the full
+sprite. Clicks also keep the drawn bounds, since players click what
+they see. Without `Hitbox`, an object collides with its drawn size as
+before. One object per creature does the job; no second invisible
+collider to keep in sync.
+
 ## Overlay: a pause menu over a frozen night
 
 ```go

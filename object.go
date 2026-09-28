@@ -24,6 +24,11 @@ type Object struct {
 	solid   bool
 	gravity bool
 
+	// hitW, hitH is the collision box when hitbox is set (Hitbox);
+	// otherwise the object collides with its drawn size w, h.
+	hitW, hitH float64
+	hitbox     bool
+
 	grounded bool
 	life     float64
 	hasLife  bool
@@ -72,6 +77,8 @@ type Object struct {
 type objState struct {
 	x, y, vx, vy float64
 	w, h         float64
+	hitW, hitH   float64
+	hitbox       bool
 	data         any
 	textStr      string
 	spritePath   string
@@ -86,8 +93,9 @@ type objState struct {
 }
 
 // Sprite creates an object from an image file. The collider defaults to
-// the image bounds; override with Size. The image itself is loaded from
-// the game's asset cache when the object is added to a scene.
+// the image bounds; override with Size (drawing too) or Hitbox
+// (collisions only). The image itself is loaded from the game's asset
+// cache when the object is added to a scene.
 func Sprite(path string) *Object {
 	return &Object{spritePath: path}
 }
@@ -132,10 +140,28 @@ func (o *Object) WithGravity() *Object {
 	return o
 }
 
-// Size overrides the collider (and draw) size. Chainable.
+// Size overrides the drawn size, which is also the collider unless
+// Hitbox sets one apart. Chainable.
 func (o *Object) Size(w, h float64) *Object {
 	o.w, o.h = w, h
 	o.sizeSet = true
+	return o
+}
+
+// Hitbox sets the collision box apart from the drawn size: a w x h box
+// centered on the object's position, used by collisions, solids,
+// Touching and Near, and reported to agents as the object's w and h.
+// Drawing, culling and clicks keep the sprite (or Size) bounds, since
+// players click what they see. The fair-contact fix: a 42px hero with
+// a 26px hitbox is only hurt when a chaser really reaches it. Without
+// Hitbox the collider is the drawn size, as before. Chainable, and
+// callable any time.
+func (o *Object) Hitbox(w, h float64) *Object {
+	o.hitW, o.hitH = w, h
+	o.hitbox = true
+	if o.scene != nil {
+		o.scene.index.invalidate() // Near and Touching see the new box now
+	}
 	return o
 }
 
@@ -277,6 +303,7 @@ func (o *Object) saveState() {
 	o.saved = &objState{
 		x: o.X, y: o.Y, vx: o.Vx, vy: o.Vy,
 		w: o.w, h: o.h,
+		hitW: o.hitW, hitH: o.hitH, hitbox: o.hitbox,
 		data:       o.Data,
 		textStr:    o.textStr,
 		spritePath: o.spritePath,
@@ -298,6 +325,7 @@ func (o *Object) restoreState() {
 	s := o.saved
 	o.X, o.Y, o.Vx, o.Vy = s.x, s.y, s.vx, s.vy
 	o.w, o.h = s.w, s.h
+	o.hitW, o.hitH, o.hitbox = s.hitW, s.hitH, s.hitbox
 	o.Data = s.data
 	o.textStr = s.textStr
 	o.spritePath = s.spritePath
@@ -312,10 +340,21 @@ func (o *Object) restoreState() {
 	o.grounded = false
 }
 
+// box is the collision box: the Hitbox when one is set, else the drawn
+// bounds. Everything physical (collisions, solids, Near, Touching,
+// observations) goes through it.
 func (o *Object) box() physics.Box {
+	if o.hitbox {
+		return physics.Box{X: o.X, Y: o.Y, W: o.hitW, H: o.hitH}
+	}
+	return o.bounds()
+}
+
+// bounds is the drawn box (sprite or Size), which clicks hit.
+func (o *Object) bounds() physics.Box {
 	return physics.Box{X: o.X, Y: o.Y, W: o.w, H: o.h}
 }
 
 func (o *Object) contains(x, y float64) bool {
-	return physics.Contains(o.box(), x, y)
+	return physics.Contains(o.bounds(), x, y)
 }

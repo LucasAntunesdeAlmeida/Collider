@@ -43,7 +43,9 @@ type Observation struct {
 
 // ObjectObs describes one live object. Tag is the game's own label
 // (tag your player "player" so agents can find themselves); Text is
-// set for text objects, so HUDs and scores are readable.
+// set for text objects, so HUDs and scores are readable. W and H are
+// the collision box: the object's Hitbox when it has one, else its
+// drawn size.
 type ObjectObs struct {
 	Tag   string  `json:"tag,omitempty"`
 	X     float64 `json:"x"`
@@ -175,9 +177,10 @@ func (s *Scene) observe(out []ObjectObs) []ObjectObs {
 		if o.dead || (o.visual && o.textStr == "") {
 			continue // scenery is noise for agents; text still matters
 		}
+		box := o.box() // the hitbox: what agents collide with
 		out = append(out, ObjectObs{
 			Tag: o.tag, X: o.X, Y: o.Y, Vx: o.Vx, Vy: o.Vy,
-			W: o.w, H: o.h, Solid: o.solid, Text: o.textStr, Fixed: o.fixed,
+			W: box.W, H: box.H, Solid: o.solid, Text: o.textStr, Fixed: o.fixed,
 		})
 	}
 	return out

@@ -101,8 +101,9 @@ func (s *Scene) bucket(tag string) *tagBucket {
 			continue
 		}
 		b.entries = append(b.entries, cellEntry{key: cellKey(cellOf(o.X), cellOf(o.Y)), i: int32(i)})
-		b.halfW = max(b.halfW, o.w/2)
-		b.halfH = max(b.halfH, o.h/2)
+		box := o.box()
+		b.halfW = max(b.halfW, box.W/2)
+		b.halfH = max(b.halfH, box.H/2)
 	}
 	slices.SortFunc(b.entries, func(a, b cellEntry) int {
 		return cmp.Or(cmp.Compare(a.key, b.key), cmp.Compare(a.i, b.i))
@@ -152,19 +153,20 @@ func (s *Scene) gather(tag string, x, y, ex, ey float64, keep func(*Object) (flo
 	return hits
 }
 
-// Near returns the live objects with this tag whose box overlaps the
-// circle of radius r around (x, y), closest center first (ties keep
-// scene order). Visual objects count, Fixed ones (screen space) never
-// do. The auto-aim and pickup-magnet query: s.Near("enemy", p.X, p.Y,
-// 300). The slice is the caller's to keep.
+// Near returns the live objects with this tag whose box (the Hitbox,
+// when set) overlaps the circle of radius r around (x, y), closest
+// center first (ties keep scene order). Visual objects count, Fixed
+// ones (screen space) never do. The auto-aim and pickup-magnet query:
+// s.Near("enemy", p.X, p.Y, 300). The slice is the caller's to keep.
 func (s *Scene) Near(tag string, x, y, r float64) []*Object {
 	hits := s.gather(tag, x, y, r, r, func(o *Object) (float64, bool) {
 		if o.dead || o.fixed {
 			return 0, false
 		}
 		// Closest point of the box to the circle center.
-		dx := max(math.Abs(o.X-x)-o.w/2, 0)
-		dy := max(math.Abs(o.Y-y)-o.h/2, 0)
+		box := o.box()
+		dx := max(math.Abs(o.X-x)-box.W/2, 0)
+		dy := max(math.Abs(o.Y-y)-box.H/2, 0)
 		if dx*dx+dy*dy > r*r {
 			return 0, false
 		}
@@ -176,10 +178,10 @@ func (s *Scene) Near(tag string, x, y, r float64) []*Object {
 	return hitObjects(hits)
 }
 
-// Touching returns the objects with this tag whose box overlaps this
-// one right now, in scene order: continuous contact, for damage over
-// time or standing in a zone, next to the enter-only OnCollision
-// events. Like collisions, it ignores visual, text and Fixed objects
+// Touching returns the objects with this tag whose box (the Hitbox,
+// when set) overlaps this one's right now, in scene order: continuous
+// contact, for damage over time or standing in a zone, next to the
+// enter-only OnCollision events. Like collisions, it ignores visual, text and Fixed objects
 // (and returns nothing when called on one), dead objects, and the
 // object itself. The slice is the caller's to keep.
 func (o *Object) Touching(tag string) []*Object {
@@ -188,7 +190,7 @@ func (o *Object) Touching(tag string) []*Object {
 		return nil
 	}
 	box := o.box()
-	hits := s.gather(tag, o.X, o.Y, o.w/2, o.h/2, func(other *Object) (float64, bool) {
+	hits := s.gather(tag, o.X, o.Y, box.W/2, box.H/2, func(other *Object) (float64, bool) {
 		if other == o || other.dead || other.visual {
 			return 0, false
 		}

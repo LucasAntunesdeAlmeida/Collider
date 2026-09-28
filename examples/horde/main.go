@@ -13,9 +13,12 @@
 // their path, chasers come in Tinted variants, Flash white when hit
 // and fade out with Alpha when they fall. Area queries do the rest:
 // Near aims the darts, Touching deals contact damage every moment a
-// chaser is on the hero, not just when contact begins. Esc or P pauses:
-// a "pause" scene opens as an Overlay on top of the frozen night, and
-// so does switching to another window (Focused). On a touch screen, or
+// chaser is on the hero, not just when contact begins, and Hitbox keeps
+// that contact fair: hero and chasers collide with their bodies, boxes
+// smaller than their sprites, so a brushing arm or an empty sprite
+// corner never costs health. Esc or P pauses: a "pause" scene opens as
+// an Overlay on top of the frozen night, and so does switching to
+// another window (Focused). On a touch screen, or
 // with the mouse, press and drag anywhere to steer: MouseDown drives a
 // virtual joystick. M mutes and unmutes everything with Volume.
 //
@@ -61,7 +64,10 @@ func main() {
 		play.Add(engine.Sprite(scenery[rand.IntN(len(scenery))]).At(x, y).Visual())
 	}
 
+	// Drawn 42x42, but the hero collides with its body only: the
+	// sprite's empty corners and swinging arms never get hit.
 	hero := play.Add(engine.Rect(42, 42, nil).At(0, 0).Tag("player").Layer(layerHero).
+		Hitbox(24, 34).
 		Animation("walk", "sprites/hero.png", 4, 10).
 		Animation("idle", "sprites/idle.png", 1, 1))
 	hero.Play("idle")
@@ -157,6 +163,7 @@ func main() {
 		a := rand.Float64() * 2 * math.Pi
 		c := play.Add(engine.Rect(36, 48, nil).
 			At(hero.X+math.Cos(a)*560, hero.Y+math.Sin(a)*560).Tag("chaser").Layer(layerChasers).
+			Hitbox(22, 40). // the body, not the outstretched arms
 			Tint(tints[rand.IntN(len(tints))]).
 			Animation("walk", "sprites/chaser.png", 2, 5))
 		c.Play("walk")

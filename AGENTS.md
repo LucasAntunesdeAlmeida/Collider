@@ -68,7 +68,8 @@ back as one observation per step:
 ```
 
 Objects carry `tag`, position (`x`, `y` is the center), velocity
-(`vx`, `vy`), size (`w`, `h`), `solid`, and `text` for HUD labels, so
+(`vx`, `vy`), collision size (`w`, `h`: the hitbox, which can be
+smaller than the sprite), `solid`, and `text` for HUD labels, so
 scores and instructions are readable. The player is tagged `"player"`.
 Decorative scenery is filtered out for you. Positions are world
 coordinates; HUD objects pinned to the screen report screen coordinates

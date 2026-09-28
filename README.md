@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); an overlay pause menu; a drag joystick and pause on focus loss; a mute key |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu; a drag joystick and pause on focus loss; a mute key |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -175,6 +175,8 @@ motion, size and text (so HUDs and scores are readable):
 
 Positions are world coordinates; objects pinned to the screen with
 `Fixed` (a HUD) report screen coordinates and carry `"fixed": true`.
+`w` and `h` are the collision box: an object's `Hitbox` when it has
+one, so agents dodge exactly what can hit them.
 While an overlay is open (a pause menu), `"overlay"` names it: it takes
 all input, and `objects` lists the frozen scene's objects, then the
 overlay's.
@@ -334,7 +336,8 @@ does not exist. That is the point.
 | `.Visual()` | Decoration: drawn, never collides |
 | `.Fixed()` | Pinned to the screen: ignores the camera, never collides (HUD) |
 | `.Layer(n)` | Draw order: lower layers first, insertion order within a layer; clicks hit the top |
-| `.Size(w, h)` | Override collider size |
+| `.Size(w, h)` | Override the drawn size (also the collider, unless Hitbox is set) |
+| `.Hitbox(w, h)` | Collision box apart from the drawn size, centered: collisions, solids, `Touching`, `Near` and agents' `w`/`h` use it; drawing and clicks keep the drawn bounds |
 | `.Animation(name, strip, frames, fps)` | Define a sprite-sheet animation |
 | `.Font(path)` / `.TextSize(px)` / `.TextColor(c)` | Text styling (custom TTF, size, color) |
 

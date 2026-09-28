@@ -17,8 +17,9 @@ func bruteNear(s *Scene, tag string, x, y, r float64) []*Object {
 		if o.dead || o.fixed || o.tag != tag {
 			continue
 		}
-		dx := max(math.Abs(o.X-x)-o.w/2, 0)
-		dy := max(math.Abs(o.Y-y)-o.h/2, 0)
+		box := o.box()
+		dx := max(math.Abs(o.X-x)-box.W/2, 0)
+		dy := max(math.Abs(o.Y-y)-box.H/2, 0)
 		if dx*dx+dy*dy <= r*r {
 			out = append(out, o)
 		}
@@ -45,7 +46,8 @@ func bruteTouching(o *Object, tag string) []*Object {
 }
 
 // randomScene fills a scene with a seeded mix of tags, sizes (a few
-// huge), visual, fixed and destroyed objects, some moving.
+// huge), hitboxes apart from the drawn size (some bigger), visual,
+// fixed and destroyed objects, some moving.
 func randomScene(seed uint64, n int) (*Scene, *rand.Rand) {
 	rng := rand.New(rand.NewPCG(seed, seed))
 	s := New("test", 800, 600).Scene("play")
@@ -57,6 +59,9 @@ func randomScene(seed uint64, n int) (*Scene, *rand.Rand) {
 		}
 		o := s.Add(Rect(w, h, Red).At(rng.Float64()*1600-800, rng.Float64()*1600-800).Tag(tags[rng.IntN(3)]))
 		o.Vx, o.Vy = rng.Float64()*400-200, rng.Float64()*400-200
+		if rng.IntN(4) == 0 {
+			o.Hitbox(w*(0.2+rng.Float64()*1.6), h*(0.2+rng.Float64()*1.6))
+		}
 		switch rng.IntN(10) {
 		case 0:
 			o.Visual()
