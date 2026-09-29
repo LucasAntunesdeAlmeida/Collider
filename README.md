@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key; full gamepad play with pad prompts |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -202,7 +202,8 @@ Four ways in:
   and it serves MCP on stdio (`observe`, `act`, `reset` tools). Any MCP
   client can connect and play your game; `act` accepts any keyboard key
   by name, or the names you declared with `Controls`, plus `click` or
-  a held pointer (`down`) at `x`, `y`.
+  a held pointer (`down`) at `x`, `y`, and gamepad buttons (`pad`)
+  and the left stick (`stickX`, `stickY`) for games played with a pad.
 - **Windowed MCP** (fight the AI): `COLLIDER_AGENT=mcp-window` opens
   the normal window running in real time while serving the same MCP
   tools. Agent input merges with the keyboard, so a person and an
@@ -294,6 +295,9 @@ does not exist. That is the point.
 | `g.Mouse() (x, y)` | Cursor position (a finger on a touch screen counts) |
 | `g.MouseDown() bool` | Is the left button (or any finger) held? Drags, virtual joysticks |
 | `g.Focused() bool` | Does the window have focus? Pause when the player switches away (always true for agents) |
+| `g.PadDown(b) bool` | Is this gamepad button held on any connected pad? `engine.PadA`, `PadB`, `PadX`, `PadY`, `PadLB`, `PadRB`, `PadLT`, `PadRT` (triggers pulled), `PadBack`, `PadStart`, `PadLStick`, `PadRStick` (sticks pressed in), `PadUp`, `PadDown`, `PadLeft`, `PadRight` (d-pad); standard layout by position: Xbox, PlayStation, Switch Pro, Steam Deck |
+| `g.PadAxis(a) float64` | A stick, raw -1..1 with Y down: `engine.PadLeftX`, `PadLeftY`, `PadRightX`, `PadRightY`; no dead zone (ignore small tilts yourself); the pad pushed furthest answers |
+| `g.PadConnected() bool` | Is a gamepad connected? Switch on-screen prompts (agents: from their first pad action on) |
 | `g.Sound(path)` | Fire-and-forget sound effect |
 | `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after |
 | `g.Save(key, v) error` | Persist a JSON-encodable value (file on desktop, localStorage in the browser, memory for agents and tests) |

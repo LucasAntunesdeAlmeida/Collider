@@ -95,8 +95,13 @@ initialize instructions.
   Optional `click` at `x`, `y` (a press on the first frame), `down` to
   hold the pointer at `x`, `y` for every frame (drags, virtual
   joysticks), and `frames` for how many 1/60s frames to hold (default
-  10). Returns the resulting observation; unknown key
-  names return an error naming the valid controls.
+  10). For games played with a gamepad, `pad` holds pad buttons by
+  name (`A`, `B`, `X`, `Y`, `LB`, `RB`, `LT`, `RT`, `Back`, `Start`,
+  `LStick`, `RStick`, and the d-pad `Up`, `Down`, `Left`, `Right`) and
+  `stickX`, `stickY` push the left stick, -1 to 1 (`y` grows
+  downward, like the screen). The game sees a pad connected from the
+  first act that uses one. Returns the resulting observation; unknown
+  key or pad button names return an error naming the valid ones.
 - `reset` restarts a scene by name.
 
 The protocol is newline-delimited JSON-RPC 2.0 (`initialize`,
@@ -108,6 +113,7 @@ MCP client is handy.
 ```go
 g.Headless("play")
 obs := g.Step(engine.Action{Keys: []engine.Key{engine.Right}})
+obs = g.Step(engine.Action{Pad: []engine.PadButton{engine.PadA}, StickX: 1})
 ```
 
 Fixed 60 steps per second, fully deterministic: same actions, same

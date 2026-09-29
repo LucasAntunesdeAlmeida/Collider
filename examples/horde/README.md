@@ -10,7 +10,8 @@ fall after three darts. Every moment a chaser touches the hero costs
 health; when the bar runs out, the horde wins. Esc or P pauses (then
 1 resumes, 2 gives up), and so does switching to another window. No
 keyboard? Press anywhere and
-drag to steer. M mutes.
+drag to steer. M mutes. A gamepad plays it all: the left stick or the
+d-pad walks, Start pauses, A resumes and B gives up.
 
 ```bash
 cd examples/horde
@@ -249,3 +250,37 @@ whole game. M toggles it in play and in the pause menu (the same
 `edge` detector as the pause key), and a small `Fixed` "MUTED" label
 on the HUD shows it is off. A settings slider would pass any value in
 between.
+
+## Gamepad: couch and Steam Deck play
+
+```go
+if g.PadDown(engine.PadLeft) { // the d-pad walks like the arrow keys
+	dx--
+}
+sx, sy := g.PadAxis(engine.PadLeftX), g.PadAxis(engine.PadLeftY)
+if tilt := math.Hypot(sx, sy); tilt > 0.2 { // raw axes: your dead zone
+	dx, dy, speed = sx, sy, min(1, tilt)    // a slight tilt walks slowly
+}
+pausePressed := edge(func() bool {
+	return g.Key(engine.Esc) || g.Key(engine.P) || g.PadDown(engine.PadStart)
+})
+```
+
+- `g.PadDown(b)` is true while a button is held on any connected
+  controller with a standard layout: Xbox, PlayStation, Switch Pro,
+  the Steam Deck and most others, by position (`PadA` is the bottom
+  face button, Cross on a PlayStation pad). The d-pad walks like the
+  keys, Start pauses and resumes, and in the pause menu A resumes and B
+  gives up; A also starts AGAIN after the night is lost.
+- `g.PadAxis(a)` reads a stick from -1 to 1, with Y growing downward
+  like the screen. It is raw: a resting stick rarely reads exactly 0,
+  so the hero ignores tilts under 0.2, and walks at a speed that
+  follows the tilt beyond it. With two pads, the one pushed furthest
+  answers.
+- `g.PadConnected()` switches the prompts: while a pad is connected the
+  menu entries read "A RESUME", "B GIVE UP" and "A AGAIN" instead of
+  the keyboard's. The `edge` detector now takes any "held" function, so
+  keys and pad buttons share it.
+- Agents play with a pad too: an `Action` with `Pad` buttons and
+  `StickX`/`StickY`, or the MCP act tool's `pad`, `stickX`, `stickY`.
+  Their pad connects with the first action that uses it.

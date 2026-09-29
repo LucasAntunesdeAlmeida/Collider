@@ -79,6 +79,9 @@ type inputSource interface {
 	clickJustPressed() bool
 	pointerDown() bool
 	focused() bool
+	padDown(PadButton) bool
+	padAxis(PadAxis) float64
+	padConnected() bool
 }
 
 // The device reads realInput makes, kept as variables so tests can
@@ -108,6 +111,7 @@ type realInput struct {
 	// Reused across frames so reading the touch state allocates
 	// nothing in the main loop.
 	touches, justPressed []ebiten.TouchID
+	pads                 []ebiten.GamepadID
 
 	// The finger answering as the cursor. Several fingers can be on
 	// the glass at once but only one can be the pointer, and the
@@ -191,6 +195,7 @@ type agentInput struct {
 	x, y  float64
 	click bool
 	down  bool // pointer held; a click implies it for its frame
+	pad   agentPad
 }
 
 // mixedInput merges the real keyboard and mouse with agent-injected

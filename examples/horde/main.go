@@ -21,7 +21,10 @@
 // another window (Focused); its entries answer to the 1 and 2 keys,
 // looked up with KeyNamed. On a touch screen, or with the mouse, press
 // and drag anywhere to steer: MouseDown drives a virtual joystick. M
-// mutes and unmutes everything with Volume.
+// mutes and unmutes everything with Volume. A gamepad plays it all: the
+// left stick (PadAxis) or the d-pad (PadDown) walks, Start pauses, A
+// and B pick the pause entries, and the menus show pad prompts while a
+// pad is connected (PadConnected).
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -123,11 +126,33 @@ func main() {
 		if g.Key(engine.S) || g.Key(engine.Down) {
 			dy++
 		}
+		// The d-pad walks like the keys.
+		if g.PadDown(engine.PadLeft) {
+			dx--
+		}
+		if g.PadDown(engine.PadRight) {
+			dx++
+		}
+		if g.PadDown(engine.PadUp) {
+			dy--
+		}
+		if g.PadDown(engine.PadDown) {
+			dy++
+		}
+		speed := 1.0 // share of full speed
+		if dx == 0 && dy == 0 {
+			// The left stick is analog: a slight tilt walks slowly.
+			// Axes are raw, so ignore a resting stick's small drift.
+			sx, sy := g.PadAxis(engine.PadLeftX), g.PadAxis(engine.PadLeftY)
+			if tilt := math.Hypot(sx, sy); tilt > 0.2 {
+				dx, dy, speed = sx, sy, min(1, tilt)
+			}
+		}
 		if sdx, sdy := stick(); dx == 0 && dy == 0 {
-			dx, dy = sdx, sdy // no keys held: the joystick steers
+			dx, dy = sdx, sdy // no keys or pad: the drag joystick steers
 		}
 		if d := math.Hypot(dx, dy); d > 0 {
-			hero.Move(dx/d*210*dt, dy/d*210*dt)
+			hero.Move(dx/d*210*speed*dt, dy/d*210*speed*dt)
 			hero.Play("walk")
 			facing = math.Atan2(dy, dx)
 			if dx != 0 {
@@ -198,24 +223,42 @@ func main() {
 		}
 	})
 
-	// g.Key reports a held key, and a press lasts several frames, so
-	// toggling on "held" would flip the pause (or the sound) every
-	// frame. edge remembers last frame's state and answers true on the
-	// press only. Each checker is shared by both scenes, since only one
-	// of them updates per frame.
-	edge := func(keys ...engine.Key) func() bool {
+	// g.Key and g.PadDown report a held button, and a press lasts
+	// several frames, so toggling on "held" would flip the pause (or the
+	// sound) every frame. edge remembers last frame's state and answers
+	// true on the press only. Each checker is shared by both scenes,
+	// since only one of them updates per frame.
+	edge := func(held func() bool) func() bool {
 		was := false
 		return func() bool {
-			down := false
-			for _, k := range keys {
-				down = down || g.Key(k)
-			}
+			down := held()
 			hit := down && !was
 			was = down
 			return hit
 		}
 	}
-	pausePressed, mutePressed := edge(engine.Esc, engine.P), edge(engine.M)
+	pausePressed := edge(func() bool {
+		return g.Key(engine.Esc) || g.Key(engine.P) || g.PadDown(engine.PadStart)
+	})
+	mutePressed := edge(func() bool { return g.Key(engine.M) })
+	padA := edge(func() bool { return g.PadDown(engine.PadA) })
+	padB := edge(func() bool { return g.PadDown(engine.PadB) })
+
+	// prompt keeps a button's label in step with the controller in use:
+	// the pad's button while a pad is connected, the key otherwise.
+	prompt := func(b *engine.Object, keys, pad string) func() {
+		shown := keys
+		return func() {
+			want := keys
+			if g.PadConnected() {
+				want = pad
+			}
+			if want != shown {
+				shown = want
+				b.SetText(want)
+			}
+		}
+	}
 
 	// M mutes and unmutes: sound effects and the music, at once.
 	mutedLabel := play.Add(engine.Text("MUTED").At(700, 60).Font(font).TextSize(12).
@@ -237,10 +280,13 @@ func main() {
 
 	play.OnUpdate(func(float64) {
 		muteKey()
-		// Esc or P pauses; switching to another window pauses too.
+		// Esc, P or Start pauses; switching to another window pauses too.
 		if pausePressed() || !g.Focused() {
 			g.Overlay("pause")
 		}
+		// A does nothing here, but its edge is kept current, so an A
+		// held when the night ends does not press AGAIN at once.
+		padA()
 	})
 
 	// --- Game over ---
@@ -252,11 +298,19 @@ func main() {
 		result.SetText(fmt.Sprintf("SURVIVED %.0f SECONDS, %d KILLS", survived, kills))
 		g.Go("over")
 	}
-	over.Add(engine.Button("AGAIN").At(400, 420).Font(font).TextSize(18).Color(engine.Green)).
-		OnClick(func() {
-			survived, kills, hp, facing, safe = 0, 0, maxHP, 0, 0
-			g.Restart("play")
-		})
+	again := func() {
+		survived, kills, hp, facing, safe = 0, 0, maxHP, 0, 0
+		g.Restart("play")
+	}
+	againBtn := over.Add(engine.Button("AGAIN").At(400, 420).Font(font).TextSize(18).Color(engine.Green))
+	againBtn.OnClick(again)
+	againPrompt := prompt(againBtn, "AGAIN", "A AGAIN")
+	over.OnUpdate(func(float64) {
+		againPrompt()
+		if padA() {
+			again()
+		}
+	})
 
 	// Contact damage: every moment a chaser touches the hero, not just
 	// the first, with a short blinking grace after each hit.
@@ -285,19 +339,26 @@ func main() {
 	pause := g.Scene("pause")
 	pause.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Alpha(0.6).Fixed())
 	pause.Add(engine.Text("PAUSED").At(400, 200).Font(font).TextSize(32))
-	pause.Add(engine.Button("1 RESUME").At(400, 320).Font(font).TextSize(18).Color(engine.Green)).
-		OnClick(g.CloseOverlay)
-	pause.Add(engine.Button("2 GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red)).
-		OnClick(lose) // Go closes the overlay too
+	resumeBtn := pause.Add(engine.Button("1 RESUME").At(400, 320).Font(font).TextSize(18).Color(engine.Green))
+	resumeBtn.OnClick(g.CloseOverlay)
+	giveUpBtn := pause.Add(engine.Button("2 GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red))
+	giveUpBtn.OnClick(lose) // Go closes the overlay too
 	// The number keys pick the entries too. The number row has no
-	// constant; KeyNamed reaches any key by name, once, at setup.
+	// constant; KeyNamed reaches any key by name, once, at setup. On a
+	// gamepad, A resumes and B gives up, and the labels say so.
 	resumeKey, giveUpKey := engine.KeyNamed("1"), engine.KeyNamed("2")
+	resumePrompt := prompt(resumeBtn, "1 RESUME", "A RESUME")
+	giveUpPrompt := prompt(giveUpBtn, "2 GIVE UP", "B GIVE UP")
 	pause.OnUpdate(func(float64) {
 		muteKey()
-		if pausePressed() || g.Key(resumeKey) {
+		resumePrompt()
+		giveUpPrompt()
+		// Read both edges every frame so neither goes stale.
+		resume, giveUp := padA(), padB()
+		if pausePressed() || g.Key(resumeKey) || resume {
 			g.CloseOverlay()
 		}
-		if g.Key(giveUpKey) {
+		if g.Key(giveUpKey) || giveUp {
 			lose()
 		}
 	})

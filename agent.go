@@ -27,6 +27,13 @@ type Action struct {
 	// MouseDown holds the pointer at MouseX, MouseY this frame (drags,
 	// virtual joysticks); Click implies it on its frame.
 	MouseDown bool `json:"mouseDown"`
+	// Pad holds gamepad buttons this frame, and StickX, StickY push
+	// the left stick (-1..1, clamped; Y grows downward). The first
+	// action that uses the pad connects it (PadConnected) for the rest
+	// of the run.
+	Pad    []PadButton `json:"-"`
+	StickX float64     `json:"stickX"`
+	StickY float64     `json:"stickY"`
 }
 
 // Observation is the structured view of the current frame: the scene
@@ -139,6 +146,7 @@ func (g *Game) injectAction(a Action) {
 	in.x, in.y = a.MouseX, a.MouseY
 	in.click = a.Click
 	in.down = a.MouseDown
+	in.pad.inject(a)
 }
 
 // Step advances exactly one frame with the given input and returns the
@@ -225,6 +233,37 @@ func (g *Game) resolveKeys(names []any) ([]Key, error) {
 	return keys, nil
 }
 
+// actArgs turns the MCP act tool's arguments into the action to hold
+// and the number of frames to hold it (default 10).
+func (g *Game) actArgs(args map[string]any) (Action, int, error) {
+	a := Action{}
+	if ks, ok := args["keys"].([]any); ok {
+		keys, err := g.resolveKeys(ks)
+		if err != nil {
+			return a, 0, err
+		}
+		a.Keys = keys
+	}
+	if ps, ok := args["pad"].([]any); ok {
+		pad, err := resolvePad(ps)
+		if err != nil {
+			return a, 0, err
+		}
+		a.Pad = pad
+	}
+	a.MouseX, _ = args["x"].(float64)
+	a.MouseY, _ = args["y"].(float64)
+	a.StickX, _ = args["stickX"].(float64)
+	a.StickY, _ = args["stickY"].(float64)
+	a.Click, _ = args["click"].(bool)
+	a.MouseDown, _ = args["down"].(bool)
+	frames := 10
+	if f, ok := args["frames"].(float64); ok && f >= 1 {
+		frames = int(f)
+	}
+	return a, frames, nil
+}
+
 // serveMCP exposes the game as an MCP server on stdio: observe, act
 // (with a frames count, since agents think slower than 60fps) and
 // reset. Headless, tools run in place and step the simulation; in
@@ -282,28 +321,12 @@ func (g *Game) serveMCP() {
 		},
 		{
 			Name:        "act",
-			Description: "Hold keys and/or click, then advance the game. keys: " + keysHelp + ". frames: how many 1/60s frames to advance with this input held (default 10). click presses the mouse at x,y on the first frame. down holds the pointer (mouse button or finger) at x,y for all the frames: drags and virtual joysticks.",
-			Schema:      `{"type":"object","properties":{"keys":{"type":"array","items":{"type":"string"}},"frames":{"type":"number"},"click":{"type":"boolean"},"down":{"type":"boolean"},"x":{"type":"number"},"y":{"type":"number"}}}`,
+			Description: "Hold keys and/or click, then advance the game. keys: " + keysHelp + ". frames: how many 1/60s frames to advance with this input held (default 10). click presses the mouse at x,y on the first frame. down holds the pointer (mouse button or finger) at x,y for all the frames: drags and virtual joysticks. pad holds gamepad buttons (" + padNamesHelp + ") and stickX, stickY push the left stick, -1..1 (y grows downward); a game may read the pad instead of, or besides, the keyboard.",
+			Schema:      `{"type":"object","properties":{"keys":{"type":"array","items":{"type":"string"}},"frames":{"type":"number"},"click":{"type":"boolean"},"down":{"type":"boolean"},"x":{"type":"number"},"y":{"type":"number"},"pad":{"type":"array","items":{"type":"string"}},"stickX":{"type":"number"},"stickY":{"type":"number"}}}`,
 			Call: func(args map[string]any) (string, error) {
-				a := Action{}
-				if ks, ok := args["keys"].([]any); ok {
-					keys, err := g.resolveKeys(ks)
-					if err != nil {
-						return "", err
-					}
-					a.Keys = keys
-				}
-				if x, ok := args["x"].(float64); ok {
-					a.MouseX = x
-				}
-				if y, ok := args["y"].(float64); ok {
-					a.MouseY = y
-				}
-				a.Click, _ = args["click"].(bool)
-				a.MouseDown, _ = args["down"].(bool)
-				frames := 10
-				if f, ok := args["frames"].(float64); ok && f >= 1 {
-					frames = int(f)
+				a, frames, err := g.actArgs(args)
+				if err != nil {
+					return "", err
 				}
 				if windowed {
 					// Real time: the input is held for the frames,
