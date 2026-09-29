@@ -120,7 +120,9 @@ obs = g.Step(engine.Action{Pad: []engine.PadButton{engine.PadA}, StickX: 1})
 ```
 
 Fixed 60 steps per second, fully deterministic: same actions, same
-results. `examples/agent/bot` is a complete bot that wins Gem Rush this
+results. A translated game plays in its default language for you
+(`g.Language()` is `""` in agent runs); run it with
+`COLLIDER_LANG=pt-BR` (any BCP 47 tag) to play a translation. `examples/agent/bot` is a complete bot that wins Gem Rush this
 way and prints how long it took.
 
 **Watching**: `g.Autopilot(fn)` runs the game windowed with your

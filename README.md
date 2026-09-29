@@ -148,7 +148,7 @@ go run .
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
 | [Caves](examples/caves/) | Exploration | Procedural generation: cellular automata map, BFS-guaranteed winnable |
 | [Runner](examples/runner/) | Endless runner | Sprite sheet animations (run/jump/death), moving-world auto-scroll |
-| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect |
+| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`) |
 | [Dungeon](examples/dungeon/) | Dungeon crawler | Multiple screens: ASCII room layouts, edge transitions, key and lock |
 | [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load`; a record kept when the window closes mid-round: `g.OnClose` |
 | [Ship](examples/ship/) | Arcade | Publishing: embedded assets, fullscreen/resizable/icon, exe and browser builds |
@@ -312,6 +312,7 @@ does not exist. That is the point.
 | `g.Load(key, &v) bool` | Read it back; false (v untouched) when missing or undecodable |
 | `g.Quit()` | End the game after this frame: the window closes and `Run` returns (does nothing in a browser; headless, the run ends) |
 | `g.CanQuit() bool` | Can Quit end the game here? False in a browser, where a page cannot close its tab: hide the QUIT entry |
+| `g.Language() string` | The player's language as a BCP 47 tag (`"pt-BR"`, `"zh-CN"`, `"en-US"`), `""` when unknown: pick your translation at startup. `""` for agents and tests; `COLLIDER_LANG=pt-BR` overrides it to try one |
 | `g.OnClose(fn)` | Run fn once when the player closes the window (X, Alt+F4, a launcher's exit), then end the game like Quit: save or bank progress there. Never runs headless, in a browser, or on Quit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
 | `g.Headless(scene)` / `g.Step(action)` / `g.Observe()` | Agent play, headless and deterministic |
@@ -429,4 +430,11 @@ does not exist. That is the point.
    working audio device (a Linux box or container without ALSA,
    PulseAudio or PipeWire) plays silently after one log line, instead
    of failing to start.
+10. **Agents and tests get the default language.** `g.Language()` is
+   `""` in the same agent and test runs (Headless and Autopilot once
+   called, `COLLIDER_AGENT=mcp`, `go test`), so a translated game
+   plays in its default language and agents read the same text on
+   every machine. The `COLLIDER_LANG` environment variable (`pt-BR`,
+   `zh-CN`; `C` for none) overrides the answer everywhere, agent runs
+   included, to try or test a translation.
 

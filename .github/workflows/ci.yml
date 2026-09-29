@@ -35,6 +35,11 @@ jobs:
       - name: Vet and build for the browser
         run: GOOS=js GOARCH=wasm go vet . && GOOS=js GOARCH=wasm go build ./...
 
+      # So do Windows builds (language_windows.go); Ebitengine needs no
+      # cgo there, so they cross-compile from here.
+      - name: Vet and build for Windows
+        run: GOOS=windows go vet . && GOOS=windows go build ./...
+
       - name: Staticcheck
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@latest
