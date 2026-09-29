@@ -63,5 +63,23 @@ name := play.Add(engine.Text("").At(300, 425).
   [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font)
   (SIL OFL, `fonts/cjk-OFL.txt`) holding only this example's Chinese
   glyphs; a real game ships the whole font (`zh_hans`, about 7 MB).
+- **Wrapping** lays the speech out in the dialog box, in every
+  language: English breaks at spaces, Chinese between any two
+  characters (never before `，` or `。`):
+
+  ```go
+  speech := play.Add(engine.Text("").Font(font, cjk).TextSize(24).
+      Wrap(560).TextAlign(engine.AlignLeft).LineHeight(36).
+      Size(560, 104).At(190+280, 502))
+  ```
+
+  `Wrap(560)` makes the text a 560px column centered on its position,
+  so `TextAlign(engine.AlignLeft)` starts every line at its left edge
+  (x 190) whatever it says. The speaker's name uses the same column
+  trick to line up with it. `LineHeight(36)` spaces the lines (a pixel
+  font's own line height has them touching). `Size` fixes the text
+  area, so the first line stays put while the typewriter adds more. A
+  word that no longer fits moves to the next line as it types, as in
+  most games.
 - `fonts/` joins `sprites/` and `audios/` in the example folder
   convention.

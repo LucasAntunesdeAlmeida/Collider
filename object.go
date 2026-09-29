@@ -66,6 +66,17 @@ type Object struct {
 	faceText string
 	faceMask uint64
 
+	// Line layout: wrapW is the Wrap column (0 = no wrapping), lineH the
+	// LineHeight (0 = the fonts'), align the TextAlign. lines is the
+	// laid-out text for linesText drawn with linesFace; anything that
+	// changes the layout clears it.
+	wrapW     float64
+	lineH     float64
+	align     Align
+	lines     *textLines
+	linesText string
+	linesFace text.Face
+
 	anims    map[string]*animation
 	curAnim  string
 	animTime float64

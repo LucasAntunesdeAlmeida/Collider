@@ -69,7 +69,7 @@ var tongues = map[string]tongue{
 		names: map[string]string{"elder": "长老", "hero": "英雄"},
 		script: []line{
 			{"elder", "今晚洞穴在低鸣，旅人。"},
-			{"hero", "我在路上就听到了。下面沉睡着什么？"},
+			{"hero", "我在路上就听到了那低鸣声。告诉我，下面究竟沉睡着什么？"},
 			{"elder", "不是沉睡。是在等待。"},
 			{"hero", "……那我就带上我的剑。"},
 			{"elder", "带上你的勇气。剑会生锈。"},
@@ -109,9 +109,15 @@ func main() {
 	play.Add(engine.Rect(776, 176, engine.Black).At(400, 488).Visual())
 
 	portrait := play.Add(engine.Sprite("sprites/elder.png").At(105, 470).Visual())
-	name := play.Add(engine.Text("").At(300, 425).Font(font, cjk).TextSize(24).TextColor(engine.Yellow))
-	speech := play.Add(engine.Text("").At(440, 495).Font(font, cjk).TextSize(12))
-	play.Add(engine.Text(t.click).At(740, 560).Font(font, cjk).TextSize(12).Visual())
+	// Speech wraps inside a fixed text area (Size): its lines start at
+	// the area's top-left corner however many follow, in any language.
+	// The name is a one-line column, left-aligned with the speech.
+	const left, width = 190, 560
+	name := play.Add(engine.Text("").Font(font, cjk).TextSize(24).TextColor(engine.Yellow).
+		Wrap(width).TextAlign(engine.AlignLeft).At(left+width/2, 425))
+	speech := play.Add(engine.Text("").Font(font, cjk).TextSize(24).
+		Wrap(width).TextAlign(engine.AlignLeft).LineHeight(36).Size(width, 104).At(left+width/2, 502))
+	play.Add(engine.Text(t.click).At(740, 566).Font(font, cjk).TextSize(12).Visual())
 
 	idx := 0
 	shown := 0.0

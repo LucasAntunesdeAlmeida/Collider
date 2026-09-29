@@ -2,6 +2,7 @@ package collider
 
 import (
 	"bytes"
+	"math"
 	"slices"
 	"sync"
 
@@ -209,7 +210,7 @@ func (o *Object) Font(paths ...string) *Object {
 		checkFont(p)
 	}
 	o.fontPaths = slices.Clone(paths)
-	o.face = nil
+	o.face, o.lines = nil, nil
 	o.measureText()
 	return o
 }
@@ -217,7 +218,7 @@ func (o *Object) Font(paths ...string) *Object {
 // TextSize sets the font size in pixels. Chainable.
 func (o *Object) TextSize(px float64) *Object {
 	o.textSize = px
-	o.face = nil
+	o.face, o.lines = nil, nil
 	o.measureText()
 	return o
 }
@@ -234,11 +235,126 @@ func (o *Object) SetText(str string) {
 	o.measureText()
 }
 
+// Wrap breaks the text into lines no wider than width pixels, at
+// spaces in Latin and Cyrillic text and between any two CJK
+// characters, never before closing punctuation (，。！？」 , . ! ?) or
+// after opening punctuation (「（ ( ), and never inside a word unless the
+// word alone is wider than the line (then between its letters). A
+// "\n" always starts a new line; spaces at the end of a wrapped line
+// are dropped.
+//
+// The text's box becomes a column exactly width wide (for clicks, and
+// agents' w) and as tall as its lines, centered on the text's position
+// like every object: with TextAlign(AlignLeft) the lines start at
+// X - width/2 whatever they say. The object's text (and what agents
+// read) stays the unwrapped string. For a fixed text area (a dialog
+// box) whose first line stays put however many lines follow, give the
+// text a Size too: its lines then start at the top of that box. 0
+// turns wrapping off. Applies to buttons' labels too. Chainable, and
+// callable any time.
+func (o *Object) Wrap(width float64) *Object {
+	o.wrapW = max(0, width)
+	o.lines = nil
+	o.measureText()
+	return o
+}
+
+// Align is how the lines of a text line up in its box (TextAlign).
+type Align int
+
+const (
+	AlignCenter Align = iota // each line centered: the default
+	AlignLeft                // lines start at the box's left edge
+	AlignRight               // lines end at the box's right edge
+)
+
+// TextAlign sets how the lines of a text line up in its box: centered
+// (the default), left or right. The box is the widest line, the Wrap
+// column or the Size, and stays centered on the text's position; a single
+// line without Wrap fills its box, so it only matters for text with
+// several lines, or with Wrap. Chainable, and callable any time.
+func (o *Object) TextAlign(a Align) *Object {
+	o.align = a
+	return o
+}
+
+// LineHeight sets the distance in pixels from one line's baseline to
+// the next, for text with several lines. The default (0) is the fonts'
+// own line height: the largest ascent plus the largest descent (plus
+// any line gap) of the fonts in use, so lines of a pixel font touch;
+// 1.5 times the text size is a comfortable paragraph. The box runs from
+// the first line's top to the last line's bottom. Chainable, and
+// callable any time.
+func (o *Object) LineHeight(px float64) *Object {
+	o.lineH = max(0, px)
+	o.lines = nil
+	o.measureText()
+	return o
+}
+
+// alignX is where a line w wide starts in a box boxW wide, on a whole
+// pixel.
+func alignX(a Align, boxW, w float64) float64 {
+	switch a {
+	case AlignLeft:
+		return 0
+	case AlignRight:
+		return math.Round(boxW - w)
+	}
+	return math.Round((boxW - w) / 2)
+}
+
+// textLines is a text laid out in lines: each line's advance, the
+// distance between baselines, and the size of the block (the widest
+// line, or the Wrap column; the first line's top to the last line's
+// bottom).
+type textLines struct {
+	lines  []string
+	widths []float64
+	pitch  float64
+	w, h   float64
+}
+
+// textLayout lays out the object's text with its face, Wrap and
+// LineHeight, reusing the last layout while none of them changed.
+func (o *Object) textLayout() *textLines {
+	face := o.textFace()
+	if o.lines != nil && o.linesText == o.textStr && o.linesFace == face {
+		return o.lines
+	}
+	l := &textLines{}
+	o.lines, o.linesText, o.linesFace = l, o.textStr, face
+	if o.textStr == "" {
+		return l
+	}
+	advance := func(s string) float64 {
+		w, _ := text.Measure(s, face, 0)
+		return w
+	}
+	l.lines = wrapLines(o.textStr, o.wrapW, advance)
+	l.widths = make([]float64, len(l.lines))
+	for i, line := range l.lines {
+		l.widths[i] = advance(line)
+		l.w = max(l.w, l.widths[i])
+	}
+	m := face.Metrics()
+	l.pitch = o.lineH
+	if l.pitch == 0 {
+		l.pitch = m.HAscent + m.HDescent + m.HLineGap
+	}
+	l.h = float64(len(l.lines)-1)*l.pitch + m.HAscent + m.HDescent
+	if o.wrapW > 0 {
+		l.w = max(l.w, o.wrapW)
+	}
+	return l
+}
+
 func (o *Object) measureText() {
 	if o.sizeSet || (!o.isText && !o.isButton) {
 		return
 	}
-	w, h := text.Measure(o.textStr, o.textFace(), 0)
+	l := o.textLayout()
+	w, h := l.w, l.h
 	if o.isButton {
 		w += buttonPadX * 2
 		h += buttonPadY * 2
@@ -247,8 +363,23 @@ func (o *Object) measureText() {
 }
 
 func (o *Object) drawText(screen *ebiten.Image, vx, vy float64) {
+	o.drawLines(screen, o.textLayout(), o.w, o.geoM(vx, vy, o.w, o.h))
+}
+
+// drawLines draws laid-out lines in a box boxW wide whose top-left is
+// at the origin of geo, each line placed by the alignment on whole
+// pixels so pixel fonts stay sharp.
+func (o *Object) drawLines(screen *ebiten.Image, l *textLines, boxW float64, geo ebiten.GeoM) {
+	face := o.textFace()
 	op := &text.DrawOptions{}
-	op.GeoM = o.geoM(vx, vy, o.w, o.h)
 	op.ColorScale = o.colorScale(o.textColor)
-	text.Draw(screen, o.textStr, o.textFace(), op)
+	for i, line := range l.lines {
+		if line == "" {
+			continue
+		}
+		op.GeoM.Reset()
+		op.GeoM.Translate(alignX(o.align, boxW, l.widths[i]), float64(i)*l.pitch)
+		op.GeoM.Concat(geo)
+		text.Draw(screen, line, face, op)
+	}
 }

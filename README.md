@@ -38,8 +38,8 @@ claude mcp add mygame -e COLLIDER_AGENT=mcp -- C:\path\to\mygame.exe
   example game is played by its own agent and even records its demo GIF
   itself
 - Scenes, timers, sprite-sheet animations, text with custom TTF fonts
-  (with fallback fonts for any script, Chinese included), sound and
-  music (wav/ogg)
+  (with fallback fonts for any script, Chinese included) and line
+  wrapping, sound and music (wav/ogg)
 - Fifteen example games across genres, from pong to a dungeon crawler,
   each one a template you can start from
 - Shipping built in: embed assets into a single .exe or build for the
@@ -149,7 +149,7 @@ go run .
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
 | [Caves](examples/caves/) | Exploration | Procedural generation: cellular automata map, BFS-guaranteed winnable |
 | [Runner](examples/runner/) | Endless runner | Sprite sheet animations (run/jump/death), moving-world auto-scroll |
-| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`), Chinese included, through a CJK fallback font |
+| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`), Chinese included, through a CJK fallback font; speech wrapped and left-aligned in a fixed text area |
 | [Dungeon](examples/dungeon/) | Dungeon crawler | Multiple screens: ASCII room layouts, edge transitions, key and lock |
 | [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load`; a record kept when the window closes mid-round: `g.OnClose` |
 | [Ship](examples/ship/) | Arcade | Publishing: embedded assets, fullscreen/resizable/icon, exe and browser builds |
@@ -358,6 +358,9 @@ does not exist. That is the point.
 | `.Animation(name, strip, frames, fps)` | Define a sprite-sheet animation |
 | `.Font(paths...)` | Custom TTF/OTF font. More paths are fallbacks: the first font draws every glyph it has, the next ones fill in the rest (a CJK font behind a Latin pixel font), each loaded the first time a text needs it |
 | `.TextSize(px)` / `.TextColor(c)` | Text styling (size, color) |
+| `.Wrap(width)` | Break text into lines at most width px wide: at spaces, between CJK characters (never before `，。！？」` or after `「`), inside a word only if it alone is wider; `"\n"` always breaks. The text's box becomes that column, still centered on its position |
+| `.TextAlign(a)` | How the lines line up in the text's box: `engine.AlignCenter` (default), `engine.AlignLeft`, `engine.AlignRight` |
+| `.LineHeight(px)` | Distance between the baselines of consecutive lines (default: the fonts' own line height) |
 
 ### Object: runtime
 
@@ -444,4 +447,11 @@ does not exist. That is the point.
    measures and draws exactly as with that font alone. Glyphs from a
    fallback sit on the same baseline, and a line is as tall as the
    largest ascent plus the largest descent among the fonts it uses.
+12. **Text lines are laid out predictably.** `"\n"` always starts a new
+   line. `.Wrap(w)` breaks only at spaces, between CJK characters (never
+   before closing punctuation or after opening punctuation), or between
+   the letters of a word wider than `w` on its own. A wrapped text's box
+   is exactly `w` wide and as tall as its lines, and it stays centered
+   on the text's position, so with `TextAlign(AlignLeft)` the lines start
+   at `X - w/2` whatever they say. Agents read the unwrapped text.
 

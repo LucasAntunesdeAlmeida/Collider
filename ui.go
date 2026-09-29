@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -97,10 +96,9 @@ func (o *Object) drawButton(screen *ebiten.Image, left, top float64) {
 	vector.FillRect(screen, x, y+h-edge, w, edge, dark, false)
 	vector.FillRect(screen, x+w-edge, y, edge, h, dark, false)
 
-	face := o.textFace()
-	tw, th := text.Measure(o.textStr, face, 0)
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(left+o.w/2-tw/2, top+o.h/2-th/2)
-	op.ColorScale = o.colorScale(o.textColor)
-	text.Draw(screen, o.textStr, face, op)
+	// The label block, centered on the plate; its lines align in it.
+	l := o.textLayout()
+	var geo ebiten.GeoM
+	geo.Translate(left+o.w/2-l.w/2, top+o.h/2-l.h/2)
+	o.drawLines(screen, l, l.w, geo)
 }
