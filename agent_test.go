@@ -183,3 +183,15 @@ func TestDisallowAgentsBlocksHeadless(t *testing.T) {
 	}()
 	g.Headless("play")
 }
+
+func TestDisallowAgentsIgnoresRecording(t *testing.T) {
+	t.Setenv("COLLIDER_RECORD", "demo.gif")
+	g, _ := newAgentGame()
+	if p := g.recordPath(); p != "demo.gif" {
+		t.Fatalf("COLLIDER_RECORD should record by default, got %q", p)
+	}
+	g.DisallowAgents()
+	if p := g.recordPath(); p != "" {
+		t.Fatalf("a game that disallows agents must not record, got %q", p)
+	}
+}

@@ -128,7 +128,8 @@ function supplying input each frame. Set `COLLIDER_RECORD=demo.gif` and
 the session saves as a GIF: this is how an agent records a demo of its
 own play (`examples/agent/demo.gif` was made exactly like that).
 
-Games can opt out of all of this with `g.DisallowAgents()`.
+Games can opt out of all of this with `g.DisallowAgents()`: agent play
+and `COLLIDER_RECORD` alike.
 
 ## Shipping a Collider game? Tell agents it is playable
 

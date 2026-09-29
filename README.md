@@ -237,7 +237,8 @@ The protocol is plain newline-delimited JSON-RPC, so even a Python
 script can drive a game through a subprocess.
 
 Tag your player `"player"` so agents can find themselves. A game can opt
-out entirely with `g.DisallowAgents()`. The
+out entirely with `g.DisallowAgents()`, which also makes it ignore
+`COLLIDER_RECORD`. The
 [Gem Rush example](examples/agent/) is a game with no human input at
 all: its own pilot plays it, and its demo GIF is agent-recorded.
 
@@ -272,6 +273,10 @@ made exactly this way):
 ```powershell
 $env:COLLIDER_RECORD="demo.gif"; go run .
 ```
+
+A game that calls `g.DisallowAgents()` ignores `COLLIDER_RECORD`, so a
+shipped build never writes a GIF wherever its environment says; call it
+only in release builds (a build tag) to keep recording demos.
 
 ---
 
@@ -312,7 +317,7 @@ does not exist. That is the point.
 | `g.Controls(map[string]Key)` | Name your inputs so agents can discover them |
 | `g.AgentState(fn)` | Attach game state to every observation |
 | `g.AgentDocs(text)` | Game rules served to agents on MCP connect |
-| `g.DisallowAgents()` | Opt out of agent play (on by default) |
+| `g.DisallowAgents()` | Lock a shipped game: no agent play (on by default), `COLLIDER_AGENT` and `COLLIDER_RECORD` ignored |
 
 ### Scene
 

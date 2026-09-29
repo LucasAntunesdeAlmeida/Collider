@@ -233,7 +233,8 @@ func (g *Game) Height() float64 { return float64(g.height) }
 
 // Run starts the game on the given scene and blocks until the window
 // closes or Quit is called. If the COLLIDER_RECORD environment variable
-// is set to a file path, the session is saved there as an animated GIF.
+// is set to a file path, the session is saved there as an animated GIF
+// (unless the game called DisallowAgents).
 //
 // Agent play (unless the game called DisallowAgents):
 //   - COLLIDER_AGENT=mcp runs headless as an MCP server on stdio; act
@@ -260,7 +261,7 @@ func (g *Game) Run(name string) {
 		}
 	}
 	g.Go(name)
-	if path := os.Getenv("COLLIDER_RECORD"); path != "" {
+	if path := g.recordPath(); path != "" {
 		g.rec = record.New(path, g.width, g.height)
 	}
 	ebiten.SetWindowTitle(g.title)
@@ -274,6 +275,16 @@ func (g *Game) Run(name string) {
 	if g.rec != nil {
 		g.rec.Save()
 	}
+}
+
+// recordPath is where Run saves the session as a GIF: COLLIDER_RECORD,
+// ignored by a game that disallowed agents, so a shipped game never
+// writes files wherever its environment says.
+func (g *Game) recordPath() string {
+	if g.agentsOff {
+		return ""
+	}
+	return os.Getenv("COLLIDER_RECORD")
 }
 
 // advance is one frame of game logic: scene switches and overlay

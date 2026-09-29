@@ -72,9 +72,12 @@ type ObjectObs struct {
 	Fixed bool `json:"fixed,omitempty"`
 }
 
-// DisallowAgents turns agent play off for this game: Headless, Step and
-// the MCP server refuse to run, and COLLIDER_AGENT is ignored. Agent
-// play is allowed by default.
+// DisallowAgents locks a shipped game against outside control: Headless,
+// Step, Autopilot and the MCP server refuse to run, and the
+// COLLIDER_AGENT and COLLIDER_RECORD environment variables are ignored,
+// so nothing can drive the game or make it write a GIF to a path of its
+// choosing. Agent play (and recording) is allowed by default; call it
+// only in release builds if you still want to record demos.
 func (g *Game) DisallowAgents() {
 	g.agentsOff = true
 }
