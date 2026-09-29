@@ -167,6 +167,23 @@ func (o *Object) Size(w, h float64) *Object {
 	return o
 }
 
+// Width is the object's drawn width in pixels, the box it is drawn in
+// and clicked by: its Size when set, else a Rect's width, a sprite's
+// image width (known once the object is in a scene), or a text's
+// measured width, with its fonts (fallbacks included), TextSize and
+// Wrap (a wrapped text is its column wide), plus the plate margins of a
+// button. A Hitbox never changes it. Text is measured the moment it
+// changes, so Width is current right after SetText, Font, TextSize,
+// Wrap or LineHeight, in the same frame, with no window and nothing
+// drawn yet: lay out a label by its edge, or test in go test that every
+// translation fits its box.
+func (o *Object) Width() float64 { return o.w }
+
+// Height is the object's drawn height in pixels, measured like Width.
+// A text is as tall as its lines: from the first line's top to the last
+// line's bottom, LineHeight apart.
+func (o *Object) Height() float64 { return o.h }
+
 // Hitbox sets the collision box apart from the drawn size: a w x h box
 // centered on the object's position, used by collisions, solids,
 // Touching and Near, and reported to agents as the object's w and h.
@@ -347,6 +364,7 @@ func (o *Object) restoreState() {
 	o.hitW, o.hitH, o.hitbox = s.hitW, s.hitH, s.hitbox
 	o.Data = s.data
 	o.textStr = s.textStr
+	o.measureText() // with the fonts, size and wrap it has now
 	o.spritePath = s.spritePath
 	o.img = s.img
 	o.life = s.life

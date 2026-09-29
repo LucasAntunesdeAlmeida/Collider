@@ -75,11 +75,22 @@ name := play.Add(engine.Text("").At(300, 425).
 
   `Wrap(560)` makes the text a 560px column centered on its position,
   so `TextAlign(engine.AlignLeft)` starts every line at its left edge
-  (x 190) whatever it says. The speaker's name uses the same column
-  trick to line up with it. `LineHeight(36)` spaces the lines (a pixel
+  (x 190) whatever it says. `LineHeight(36)` spaces the lines (a pixel
   font's own line height has them touching). `Size` fixes the text
   area, so the first line stays put while the typewriter adds more. A
   word that no longer fits moves to the next line as it types, as in
   most games.
+- **Measured text** lays out labels by their edges. A text's
+  `Width()` and `Height()` are measured the moment it changes (fonts,
+  fallback, size and wrap included), so the speaker's name starts at
+  the speech's left edge, and the CLICK hint ends at the frame's right
+  edge, whatever the language:
+
+  ```go
+  name.SetText(strings.ToUpper(t.names[l.who]))
+  name.X = left + name.Width()/2
+  ```
+
+  The same call lets a test check that every translation fits its box.
 - `fonts/` joins `sprites/` and `audios/` in the example folder
   convention.

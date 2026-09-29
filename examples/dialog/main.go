@@ -111,13 +111,15 @@ func main() {
 	portrait := play.Add(engine.Sprite("sprites/elder.png").At(105, 470).Visual())
 	// Speech wraps inside a fixed text area (Size): its lines start at
 	// the area's top-left corner however many follow, in any language.
-	// The name is a one-line column, left-aligned with the speech.
+	// The name starts where the speech does: show re-anchors it by its
+	// measured Width each time it changes.
 	const left, width = 190, 560
-	name := play.Add(engine.Text("").Font(font, cjk).TextSize(24).TextColor(engine.Yellow).
-		Wrap(width).TextAlign(engine.AlignLeft).At(left+width/2, 425))
+	name := play.Add(engine.Text("").Font(font, cjk).TextSize(24).TextColor(engine.Yellow).At(left, 425))
 	speech := play.Add(engine.Text("").Font(font, cjk).TextSize(24).
 		Wrap(width).TextAlign(engine.AlignLeft).LineHeight(36).Size(width, 104).At(left+width/2, 502))
-	play.Add(engine.Text(t.click).At(740, 566).Font(font, cjk).TextSize(12).Visual())
+	// The hint ends at x 770 however long the word is in this language.
+	hint := play.Add(engine.Text(t.click).Font(font, cjk).TextSize(12).Visual())
+	hint.At(770-hint.Width()/2, 566)
 
 	idx := 0
 	shown := 0.0
@@ -125,6 +127,7 @@ func main() {
 	show := func() {
 		l := script[idx]
 		name.SetText(strings.ToUpper(t.names[l.who]))
+		name.X = left + name.Width()/2 // measured at once: left edge at x 190
 		portrait.SetSprite("sprites/" + l.who + ".png")
 		shown = 0
 		blipAt = 0

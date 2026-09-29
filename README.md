@@ -149,7 +149,7 @@ go run .
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
 | [Caves](examples/caves/) | Exploration | Procedural generation: cellular automata map, BFS-guaranteed winnable |
 | [Runner](examples/runner/) | Endless runner | Sprite sheet animations (run/jump/death), moving-world auto-scroll |
-| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`), Chinese included, through a CJK fallback font; speech wrapped and left-aligned in a fixed text area |
+| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`), Chinese included, through a CJK fallback font; speech wrapped and left-aligned in a fixed text area, labels anchored by their measured `Width` |
 | [Dungeon](examples/dungeon/) | Dungeon crawler | Multiple screens: ASCII room layouts, edge transitions, key and lock |
 | [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load`; a record kept when the window closes mid-round: `g.OnClose` |
 | [Ship](examples/ship/) | Arcade | Publishing: embedded assets, fullscreen/resizable/icon, exe and browser builds |
@@ -371,6 +371,7 @@ does not exist. That is the point.
 | `o.Move(dx, dy)` | Move (respects solid collisions) |
 | `o.MoveToward(x, y, dist)` / `o.VelocityToward(x, y, speed)` | Homing helpers |
 | `o.Grounded() bool` | Resting on a solid (platformers) |
+| `o.Width() float64` / `o.Height() float64` | The drawn size in px: the Size, the image (once added), the Rect, or the text as measured (fonts and fallbacks, TextSize, the Wrap column, lines LineHeight apart, a button's plate); current right after SetText, Font, TextSize, Wrap or LineHeight, no frame or window needed. Lay labels out by their edges, test that translations fit. Never the Hitbox |
 | `o.SetText(s)` / `o.SetSprite(path)` | Change content at runtime |
 | `o.Play(name)` / `o.PlayOnce(name)` | Switch animations (loop / hold last frame) |
 | `.Alpha(a)` | Opacity, 0 (invisible) to 1 (opaque, the default): fades, ghosts |
@@ -454,4 +455,10 @@ does not exist. That is the point.
    is exactly `w` wide and as tall as its lines, and it stays centered
    on the text's position, so with `TextAlign(AlignLeft)` the lines start
    at `X - w/2` whatever they say. Agents read the unwrapped text.
+13. **Text is measured the moment it changes.** `o.Width()` and
+   `o.Height()` are current right after `SetText`, `Font`, `TextSize`,
+   `Wrap` or `LineHeight`, in the same frame, headless and in `go test`
+   with no window: they are the box the text draws in, fallback fonts
+   and wrapped lines included (a `Size` overrides it; a `Hitbox` never
+   changes it). A sprite has its image's size once it is in a scene.
 
