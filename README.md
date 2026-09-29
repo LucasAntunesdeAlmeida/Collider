@@ -299,7 +299,7 @@ does not exist. That is the point.
 | `g.PadDown(b) bool` | Is this gamepad button held on any connected pad? `engine.PadA`, `PadB`, `PadX`, `PadY`, `PadLB`, `PadRB`, `PadLT`, `PadRT` (triggers pulled), `PadBack`, `PadStart`, `PadLStick`, `PadRStick` (sticks pressed in), `PadUp`, `PadDown`, `PadLeft`, `PadRight` (d-pad); standard layout by position: Xbox, PlayStation, Switch Pro, Steam Deck |
 | `g.PadAxis(a) float64` | A stick, raw -1..1 with Y down: `engine.PadLeftX`, `PadLeftY`, `PadRightX`, `PadRightY`; no dead zone (ignore small tilts yourself); the pad pushed furthest answers |
 | `g.PadConnected() bool` | Is a gamepad connected? Switch on-screen prompts (agents: from their first pad action on) |
-| `g.Sound(path)` | Fire-and-forget sound effect |
+| `g.Sound(path)` | Fire-and-forget sound effect (silent for agents and tests, see below) |
 | `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after; scales both channels below |
 | `g.MusicVolume(v)` | Music volume 0..1, times the master: applies to the playing music at once (a settings slider) |
 | `g.SoundVolume(v)` | Sound effect volume 0..1, times the master, for every `Sound` started after (0: they do no work) |
@@ -319,7 +319,7 @@ does not exist. That is the point.
 | Call | Meaning |
 |------|---------|
 | `s.Add(obj) *Object` | Put an object in the scene (any time, even mid-game) |
-| `s.Music(path)` | Looping background music while the scene is active |
+| `s.Music(path)` | Looping background music while the scene is active (silent for agents and tests) |
 | `s.Gravity(px_per_s2)` | Gravity for `WithGravity()` objects |
 | `s.Every(sec, fn)` | Repeating timer |
 | `s.After(sec, fn)` | One-shot timer |
@@ -411,4 +411,13 @@ does not exist. That is the point.
    false. Headless, the run ends instead: every later `Step` advances
    nothing and returns the final observation with `quit: true`, until
    `Headless` (or the MCP `reset` tool) starts a new run.
+9. **Audio never gets in the way.** Agent and test runs (`Headless`,
+   `Autopilot`, `COLLIDER_AGENT=mcp`, `go test`) are silent: `Sound`
+   and `Music` do no audio work and the sound device is never opened.
+   These are the same runs whose saves stay in memory. A
+   `COLLIDER_AGENT=mcp-window` session is a real window a person
+   watches and plays along with, so it has sound. A machine with no
+   working audio device (a Linux box or container without ALSA,
+   PulseAudio or PipeWire) plays silently after one log line, instead
+   of failing to start.
 

@@ -123,7 +123,8 @@ func (s *Scene) Add(o *Object) *Object {
 }
 
 // Music sets looping background music (wav or ogg) that plays while the
-// scene is active.
+// scene is active. Like Sound, it stays silent in agent and test runs
+// and on a machine with no working audio device.
 func (s *Scene) Music(path string) {
 	s.musicPath = path
 }

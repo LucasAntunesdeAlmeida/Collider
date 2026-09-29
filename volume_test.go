@@ -55,8 +55,10 @@ func TestVolumeChannelsMultiplyWithTheMaster(t *testing.T) {
 }
 
 func TestMutedSoundDoesNoWork(t *testing.T) {
-	// A windowed game: Sound really plays here. The file does not
-	// exist, so any work (reading, decoding, a player) would panic.
+	realRun(t)
+	// A windowed game a player launched: Sound really plays here. The
+	// file does not exist, so any work (reading, decoding, a player)
+	// would panic.
 	g := New("volume-test", 800, 600)
 	g.SoundVolume(0)
 	g.Sound("does-not-exist.wav")

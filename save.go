@@ -24,7 +24,7 @@ func (g *Game) Save(key string, v any) error {
 	if err != nil {
 		return err
 	}
-	if g.saveInMemory() {
+	if g.agentOrTestRun() {
 		if g.memSaves == nil {
 			g.memSaves = map[string][]byte{}
 		}
@@ -42,7 +42,7 @@ func (g *Game) Save(key string, v any) error {
 func (g *Game) Load(key string, v any) bool {
 	var b []byte
 	var ok bool
-	if g.saveInMemory() {
+	if g.agentOrTestRun() {
 		b, ok = g.memSaves[saveKey(key)]
 	} else {
 		b, ok = readSave(g.title, saveKey(key))
@@ -64,10 +64,14 @@ func (g *Game) Load(key string, v any) bool {
 	return true
 }
 
-// saveInMemory reports whether saves stay in memory: agent and test
-// runs, including a game whose setup calls Load before Run turns it
-// into an MCP server.
-func (g *Game) saveInMemory() bool {
+// agentOrTestRun reports whether this run belongs to a program rather
+// than a player: Headless, Autopilot, go test, or COLLIDER_AGENT=mcp
+// (checked here too, so a game whose setup calls Load before Run turns
+// it into an MCP server is covered). Such runs keep saves in memory and
+// play no audio. A COLLIDER_AGENT=mcp-window session is not one: it is
+// a real window a person can watch and play along with, so it saves
+// and sounds like a normal run.
+func (g *Game) agentOrTestRun() bool {
 	return g.headless || g.pilot != nil || underTest() ||
 		(os.Getenv("COLLIDER_AGENT") == "mcp" && !g.agentsOff)
 }
@@ -88,7 +92,7 @@ func saveKey(key string) string {
 }
 
 // underTest is testing.Testing, swappable so the engine's own tests can
-// exercise the real storage backend.
+// exercise the real storage backend and audio path.
 var underTest = testing.Testing
 
 var errNoStorage = errors.New("collider: save storage is unavailable")

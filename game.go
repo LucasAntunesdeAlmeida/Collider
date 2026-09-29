@@ -129,10 +129,13 @@ func (g *Game) mustScene(name string) *Scene {
 	return s
 }
 
-// Sound plays a short effect, fire and forget. Silent in headless
-// (agent) runs so bots and CI never touch the audio device.
+// Sound plays a short effect, fire and forget. Agent and test runs
+// (Headless, Autopilot, COLLIDER_AGENT=mcp, go test) are silent: no
+// audio work at all, the device is never opened. On a machine with no
+// working audio device the game plays silently too, after one log
+// line.
 func (g *Game) Sound(path string) {
-	if g.headless {
+	if g.agentOrTestRun() {
 		return
 	}
 	g.assets.PlaySound(path)
@@ -282,7 +285,7 @@ func (g *Game) advance(dt float64) {
 		g.current = g.next
 		g.next = nil
 		g.current.activate()
-		if !g.headless {
+		if !g.agentOrTestRun() {
 			g.playMusic(g.current.musicPath)
 		}
 	}

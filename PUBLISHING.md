@@ -66,6 +66,16 @@ Test locally with any static server, then publish on itch.io: zip the
 will be played in the browser", set the viewport to your window size.
 Your game is now a link.
 
+## Linux
+
+Ebitengine needs cgo on Linux, so build there (a VM, WSL or a
+container such as Valve's Steam Runtime SDK) with `gcc`, `pkg-config`
+and the ALSA and X11 development packages (`libasound2-dev`,
+`libgl1-mesa-dev`, `libx11-dev`, `libxcursor-dev`, `libxi-dev`,
+`libxinerama-dev`, `libxrandr-dev`, `libxxf86vm-dev`). A player whose
+machine has no working audio device still gets the game: it plays
+silently and logs one line saying why.
+
 ## Third-party license notices
 
 A shipped binary contains Ebitengine (Apache 2.0) and other permissive

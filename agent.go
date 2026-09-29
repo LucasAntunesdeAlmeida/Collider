@@ -131,7 +131,8 @@ func (g *Game) Headless(scene string) {
 // Autopilot runs the game windowed while an agent function supplies the
 // input: fn receives each frame's observation and returns the action to
 // hold. Watch a bot play, or combine with COLLIDER_RECORD and let the
-// agent record its own demo GIF. Call before Run.
+// agent record its own demo GIF. Like every agent run it plays no
+// audio. Call before Run.
 func (g *Game) Autopilot(fn func(Observation) Action) {
 	if g.agentsOff {
 		panic("collider: agent play is disallowed by this game")
