@@ -325,7 +325,7 @@ func (g *Game) playMusic(path string) {
 		return
 	}
 	if g.musicPlayer != nil {
-		g.musicPlayer.Close()
+		g.musicPlayer.PauseAndStopReading()
 		g.musicPlayer = nil
 	}
 	g.musicPath = path
