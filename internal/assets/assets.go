@@ -20,38 +20,64 @@ type Cache struct {
 	files  map[string][]byte
 	sounds map[string][]byte
 
-	// volume is the master volume, 0..1, applied to every player the
-	// cache starts.
-	volume float64
+	// volumes holds each channel's volume, 0..1: the master one, and
+	// the music and sound effect ones it multiplies (see Level).
+	volumes [channels]float64
 }
+
+// Channel is a volume channel: Master scales everything, Music and
+// Sounds scale their own kind under it.
+type Channel int
+
+const (
+	Master Channel = iota
+	Music
+	Sounds
+	channels
+)
 
 func NewCache() *Cache {
 	return &Cache{
-		images: map[string]*ebiten.Image{},
-		files:  map[string][]byte{},
-		sounds: map[string][]byte{},
-		volume: 1,
+		images:  map[string]*ebiten.Image{},
+		files:   map[string][]byte{},
+		sounds:  map[string][]byte{},
+		volumes: [channels]float64{1, 1, 1},
 	}
 }
 
-// SetVolume sets the master volume, clamped to 0..1, for every sound
-// and music player started from now on, and returns the stored value.
-func (c *Cache) SetVolume(v float64) float64 {
+// SetVolume sets a channel's volume, clamped to 0..1 (NaN = 0), for
+// every player started from now on, and returns the stored value.
+func (c *Cache) SetVolume(ch Channel, v float64) float64 {
 	v = min(1, max(0, v))
 	if v != v { // NaN
 		v = 0
 	}
 	c.mu.Lock()
-	c.volume = v
+	c.volumes[ch] = v
 	c.mu.Unlock()
 	return v
 }
 
-// Volume returns the master volume.
-func (c *Cache) Volume() float64 {
+// Volume returns a channel's own volume, as set.
+func (c *Cache) Volume(ch Channel) float64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.volume
+	return c.volumes[ch]
+}
+
+// Level returns the volume a player of this channel plays at: its own
+// volume times the master one.
+func (c *Cache) Level(ch Channel) float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.levelLocked(ch)
+}
+
+func (c *Cache) levelLocked(ch Channel) float64 {
+	if ch == Master {
+		return c.volumes[Master]
+	}
+	return c.volumes[Master] * c.volumes[ch]
 }
 
 // Image returns the cached image for a path, loading it on first use.

@@ -26,7 +26,9 @@
 // and B pick the pause entries, and the menus show pad prompts while a
 // pad is connected (PadConnected). The pause menu's QUIT (3, or Y)
 // ends the game with Quit; in a browser, where a page cannot close its
-// tab, CanQuit is false and the entry is not there.
+// tab, CanQuit is false and the entry is not there. The pause menu
+// also sets the music and the sound effects apart (MusicVolume,
+// SoundVolume), under the master volume M mutes.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -247,20 +249,26 @@ func main() {
 	padB := edge(func() bool { return g.PadDown(engine.PadB) })
 	padY := edge(func() bool { return g.PadDown(engine.PadY) })
 
-	// prompt keeps a button's label in step with the controller in use:
-	// the pad's button while a pad is connected, the key otherwise.
-	prompt := func(b *engine.Object, keys, pad string) func() {
-		shown := keys
+	// label keeps a button's text in step with the controller in use:
+	// text(pad) is asked every frame, and the button is re-measured only
+	// when the answer changes. prompt is the common case: the pad's
+	// button while a pad is connected, the key otherwise.
+	label := func(b *engine.Object, text func(pad bool) string) func() {
+		shown := ""
 		return func() {
-			want := keys
-			if g.PadConnected() {
-				want = pad
-			}
-			if want != shown {
+			if want := text(g.PadConnected()); want != shown {
 				shown = want
 				b.SetText(want)
 			}
 		}
+	}
+	prompt := func(b *engine.Object, keys, pad string) func() {
+		return label(b, func(onPad bool) string {
+			if onPad {
+				return pad
+			}
+			return keys
+		})
 	}
 
 	// M mutes and unmutes: sound effects and the music, at once.
@@ -355,6 +363,39 @@ func main() {
 		quitBtn.OnClick(g.Quit)
 		quitPrompt = prompt(quitBtn, "3 QUIT", "Y QUIT")
 	}
+	// Music and sound effects each have a volume of their own, under
+	// the master one that M mutes: 4 (LB on a pad) and 5 (RB) cycle
+	// them through 100, 50 and 0%. A new sound level plays a sample.
+	levels := []float64{1, 0.5, 0}
+	musicAt, soundAt := 0, 0
+	cycleMusic := func() {
+		musicAt = (musicAt + 1) % len(levels)
+		g.MusicVolume(levels[musicAt]) // the playing music changes at once
+	}
+	cycleSound := func() {
+		soundAt = (soundAt + 1) % len(levels)
+		g.SoundVolume(levels[soundAt])
+		g.Sound("audios/hit.wav")
+	}
+	musicBtn := pause.Add(engine.Button("4 MUSIC 100%").At(270, 550).Font(font).TextSize(12))
+	musicBtn.OnClick(cycleMusic)
+	soundBtn := pause.Add(engine.Button("5 SOUNDS 100%").At(530, 550).Font(font).TextSize(12))
+	soundBtn.OnClick(cycleSound)
+	volumeLabel := func(b *engine.Object, key, pad, name string, at *int) func() {
+		return label(b, func(onPad bool) string {
+			k := key
+			if onPad {
+				k = pad
+			}
+			return fmt.Sprintf("%s %s %.0f%%", k, name, levels[*at]*100)
+		})
+	}
+	musicLabel := volumeLabel(musicBtn, "4", "LB", "MUSIC", &musicAt)
+	soundLabel := volumeLabel(soundBtn, "5", "RB", "SOUNDS", &soundAt)
+	musicKey, soundKey := engine.KeyNamed("4"), engine.KeyNamed("5")
+	musicPressed := edge(func() bool { return g.Key(musicKey) || g.PadDown(engine.PadLB) })
+	soundPressed := edge(func() bool { return g.Key(soundKey) || g.PadDown(engine.PadRB) })
+
 	// The number keys pick the entries too. The number row has no
 	// constant; KeyNamed reaches any key by name, once, at setup. On a
 	// gamepad, A resumes, B gives up and Y quits, and the labels say so.
@@ -363,9 +404,17 @@ func main() {
 	giveUpPrompt := prompt(giveUpBtn, "2 GIVE UP", "B GIVE UP")
 	pause.OnUpdate(func(float64) {
 		muteKey()
+		if musicPressed() {
+			cycleMusic()
+		}
+		if soundPressed() {
+			cycleSound()
+		}
 		resumePrompt()
 		giveUpPrompt()
 		quitPrompt()
+		musicLabel()
+		soundLabel()
 		// Read every edge every frame so none goes stale.
 		resume, giveUp, quit := padA(), padB(), padY()
 		if pausePressed() || g.Key(resumeKey) || resume {

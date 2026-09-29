@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key; full gamepad play with pad prompts; a QUIT entry where quitting is possible |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key and separate music and sound volumes; full gamepad play with pad prompts; a QUIT entry where quitting is possible |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -300,7 +300,9 @@ does not exist. That is the point.
 | `g.PadAxis(a) float64` | A stick, raw -1..1 with Y down: `engine.PadLeftX`, `PadLeftY`, `PadRightX`, `PadRightY`; no dead zone (ignore small tilts yourself); the pad pushed furthest answers |
 | `g.PadConnected() bool` | Is a gamepad connected? Switch on-screen prompts (agents: from their first pad action on) |
 | `g.Sound(path)` | Fire-and-forget sound effect |
-| `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after |
+| `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after; scales both channels below |
+| `g.MusicVolume(v)` | Music volume 0..1, times the master: applies to the playing music at once (a settings slider) |
+| `g.SoundVolume(v)` | Sound effect volume 0..1, times the master, for every `Sound` started after (0: they do no work) |
 | `g.Save(key, v) error` | Persist a JSON-encodable value (file on desktop, localStorage in the browser, memory for agents and tests) |
 | `g.Load(key, &v) bool` | Read it back; false (v untouched) when missing or undecodable |
 | `g.Quit()` | End the game after this frame: the window closes and `Run` returns (does nothing in a browser; headless, the run ends) |

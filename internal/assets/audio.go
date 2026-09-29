@@ -52,10 +52,17 @@ func decodeAudio(path string, r io.ReadSeeker) audioStream {
 	}
 }
 
-// PlaySound plays a short effect, fire and forget. The decoded PCM is
-// cached by path, so repeated plays are allocation-cheap.
+// PlaySound plays a short effect, fire and forget, at the Sounds level.
+// The decoded PCM is cached by path, so repeated plays are
+// allocation-cheap. Muted (a level of 0), it does no work at all: no
+// decoding, no player.
 func (c *Cache) PlaySound(path string) {
 	c.mu.Lock()
+	vol := c.levelLocked(Sounds)
+	if vol == 0 {
+		c.mu.Unlock()
+		return
+	}
 	pcm, ok := c.sounds[path]
 	if !ok {
 		stream := decodeAudio(path, bytes.NewReader(c.fileLocked(path)))
@@ -66,23 +73,21 @@ func (c *Cache) PlaySound(path string) {
 		}
 		c.sounds[path] = pcm
 	}
-	vol := c.volume
 	c.mu.Unlock()
 
-	if vol == 0 {
-		return // muted: do not even start a player
-	}
 	p := context().NewPlayerFromBytes(pcm)
 	p.SetVolume(vol)
 	p.Play()
 }
 
-// PlayMusic starts a path looping forever and returns the player, so
-// the caller can stop it on scene switches.
+// PlayMusic starts a path looping forever at the Music level and
+// returns the player, so the caller can stop it on scene switches and
+// change its volume. Muted, it still plays silently, so raising the
+// volume brings the music back where it would be.
 func (c *Cache) PlayMusic(path string) *audio.Player {
 	c.mu.Lock()
 	data := c.fileLocked(path)
-	vol := c.volume
+	vol := c.levelLocked(Music)
 	c.mu.Unlock()
 
 	stream := decodeAudio(path, bytes.NewReader(data))

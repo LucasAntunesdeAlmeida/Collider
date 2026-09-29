@@ -139,14 +139,36 @@ func (g *Game) Sound(path string) {
 }
 
 // Volume sets the master volume from 0 (muted) to 1 (full, the
-// default); values outside are clamped. It applies to the music that is
-// playing right away, and to every sound effect and music started
+// default); values outside are clamped, NaN counts as 0. It scales both
+// channels, MusicVolume and SoundVolume: it applies to the music that
+// is playing right away, and to every sound effect and music started
 // afterwards. Callable any time, including from an input handler for a
 // mute key.
 func (g *Game) Volume(v float64) {
-	v = g.assets.SetVolume(v)
+	g.assets.SetVolume(assets.Master, v)
+	g.applyMusicVolume()
+}
+
+// MusicVolume sets the music's own volume, 0 to 1 (the default),
+// clamped like Volume. The music plays at this times the master
+// Volume, starting with the track playing now. For a settings menu's
+// music slider.
+func (g *Game) MusicVolume(v float64) {
+	g.assets.SetVolume(assets.Music, v)
+	g.applyMusicVolume()
+}
+
+// SoundVolume sets the sound effects' own volume, 0 to 1 (the
+// default), clamped like Volume. Every Sound started afterwards plays
+// at this times the master Volume; at 0, Sound does no work at all.
+func (g *Game) SoundVolume(v float64) {
+	g.assets.SetVolume(assets.Sounds, v)
+}
+
+// applyMusicVolume brings the playing music to the current level.
+func (g *Game) applyMusicVolume() {
 	if g.musicPlayer != nil {
-		g.musicPlayer.SetVolume(v)
+		g.musicPlayer.SetVolume(g.assets.Level(assets.Music))
 	}
 }
 

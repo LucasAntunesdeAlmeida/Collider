@@ -10,7 +10,8 @@ fall after three darts. Every moment a chaser touches the hero costs
 health; when the bar runs out, the horde wins. Esc or P pauses (then
 1 resumes, 2 gives up), and so does switching to another window. No
 keyboard? Press anywhere and
-drag to steer. M mutes. A gamepad plays it all: the left stick or the
+drag to steer. M mutes; in the pause menu, 4 and 5 (LB and RB) set the
+music and the sound effects apart. A gamepad plays it all: the left stick or the
 d-pad walks, Start pauses, A resumes and B gives up. The pause menu's
 QUIT (3, or Y on a pad) closes the game; the browser build has no QUIT,
 since a web page cannot close its tab.
@@ -252,6 +253,21 @@ whole game. M toggles it in play and in the pause menu (the same
 `edge` detector as the pause key), and a small `Fixed` "MUTED" label
 on the HUD shows it is off. A settings slider would pass any value in
 between.
+
+```go
+levels := []float64{1, 0.5, 0}
+g.MusicVolume(levels[musicAt]) // the playing music changes at once
+g.SoundVolume(levels[soundAt]) // every sound effect from now on
+```
+
+Players want the music quieter than the hits, or off entirely, so
+each kind has its own volume under the master one: `g.MusicVolume(v)`
+and `g.SoundVolume(v)`, 0 to 1 (the default), clamped like `Volume`.
+What you hear is the channel's volume times the master's, so M still
+mutes everything and unmuting brings back each channel where it was.
+The pause menu's "4 MUSIC 100%" and "5 SOUNDS 100%" entries (LB and RB
+on a pad, or a click) cycle them through 100, 50 and 0%; a new sound
+level plays a sample hit. At 0 a sound effect does no work at all.
 
 ## Gamepad: couch and Steam Deck play
 
