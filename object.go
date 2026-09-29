@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/LucasAntunesdeAlmeida/collider/internal/physics"
 )
@@ -54,9 +55,16 @@ type Object struct {
 	flashLeft  float64
 
 	textStr   string
-	fontPath  string
+	fontPaths []string // Font: the first draws what it can, the rest fill in
 	textSize  float64
 	textColor Color
+
+	// face measures and draws textStr (textFace); faceText is the text
+	// it was chosen for and faceMask the fonts it combines. Font and
+	// TextSize clear it.
+	face     text.Face
+	faceText string
+	faceMask uint64
 
 	anims    map[string]*animation
 	curAnim  string

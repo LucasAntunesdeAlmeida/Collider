@@ -1,10 +1,11 @@
 // Dialog: a visual-novel style conversation with drawn portraits, a
 // framed dialog box, a typewriter effect with letter blips, and a menu.
 // Click to advance; clicking mid-line reveals the rest instantly.
-// It speaks the player's language: English or Portuguese.
+// It speaks the player's language: English, Portuguese or Chinese,
+// with a CJK pixel font filling in the glyphs the Latin one lacks.
 //
 // Run from this folder: cd examples/dialog && go run .
-// Try a language: COLLIDER_LANG=pt-BR go run .
+// Try a language: COLLIDER_LANG=zh-CN go run . (or pt-BR)
 package main
 
 import (
@@ -13,7 +14,14 @@ import (
 	engine "github.com/LucasAntunesdeAlmeida/collider"
 )
 
-const font = "fonts/pixel.ttf"
+// Every text uses both fonts: the pixel font draws what it has (Latin,
+// Cyrillic), the CJK font fills in the rest, and it is only loaded once
+// a Chinese glyph shows up. Sizes are multiples of 12, where the 12px
+// CJK font is sharp.
+const (
+	font = "fonts/pixel.ttf"
+	cjk  = "fonts/cjk.ttf"
+)
 
 type line struct {
 	who  string // portrait: sprites/<who>.png
@@ -54,6 +62,19 @@ var tongues = map[string]tongue{
 			{"elder", "Leve sua coragem. Espadas enferrujam."},
 		},
 	},
+	"zh": {
+		title: "洞穴在低鸣", sub: "一段对话", hint: "点击继续",
+		listen: "倾听", click: "点击", over: "对话结束",
+		again: "再听一次", menu: "菜单",
+		names: map[string]string{"elder": "长老", "hero": "英雄"},
+		script: []line{
+			{"elder", "今晚洞穴在低鸣，旅人。"},
+			{"hero", "我在路上就听到了。下面沉睡着什么？"},
+			{"elder", "不是沉睡。是在等待。"},
+			{"hero", "……那我就带上我的剑。"},
+			{"elder", "带上你的勇气。剑会生锈。"},
+		},
+	},
 }
 
 func main() {
@@ -72,10 +93,10 @@ func main() {
 	menu := g.Scene("menu")
 	menu.Music("audios/theme.wav")
 	menu.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
-	menu.Add(engine.Text(t.title).At(400, 150).Font(font).TextSize(32).TextColor(engine.Yellow))
-	menu.Add(engine.Text(t.sub).At(400, 220).Font(font).TextSize(14))
-	menu.Add(engine.Text(t.hint).At(400, 500).Font(font).TextSize(12))
-	menu.Add(engine.Button(t.listen).At(400, 360).Font(font).TextSize(22).Color(engine.Green)).
+	menu.Add(engine.Text(t.title).At(400, 150).Font(font, cjk).TextSize(48).TextColor(engine.Yellow))
+	menu.Add(engine.Text(t.sub).At(400, 220).Font(font, cjk).TextSize(12))
+	menu.Add(engine.Text(t.hint).At(400, 500).Font(font, cjk).TextSize(12))
+	menu.Add(engine.Button(t.listen).At(400, 360).Font(font, cjk).TextSize(24).Color(engine.Green)).
 		OnClick(func() { g.Restart("play") })
 
 	// --- Conversation ---
@@ -88,9 +109,9 @@ func main() {
 	play.Add(engine.Rect(776, 176, engine.Black).At(400, 488).Visual())
 
 	portrait := play.Add(engine.Sprite("sprites/elder.png").At(105, 470).Visual())
-	name := play.Add(engine.Text("").At(300, 425).Font(font).TextSize(22).TextColor(engine.Yellow))
-	speech := play.Add(engine.Text("").At(440, 495).Font(font).TextSize(13))
-	play.Add(engine.Text(t.click).At(740, 560).Font(font).TextSize(9).Visual())
+	name := play.Add(engine.Text("").At(300, 425).Font(font, cjk).TextSize(24).TextColor(engine.Yellow))
+	speech := play.Add(engine.Text("").At(440, 495).Font(font, cjk).TextSize(12))
+	play.Add(engine.Text(t.click).At(740, 560).Font(font, cjk).TextSize(12).Visual())
 
 	idx := 0
 	shown := 0.0
@@ -138,14 +159,14 @@ func main() {
 	// --- End ---
 	end := g.Scene("end")
 	end.Add(engine.Sprite("sprites/background.png").At(400, 300).Visual())
-	end.Add(engine.Text(t.over).At(400, 220).Font(font).TextSize(22).TextColor(engine.Yellow))
-	end.Add(engine.Button(t.again).At(290, 400).Font(font).TextSize(16).Color(engine.Green)).
+	end.Add(engine.Text(t.over).At(400, 220).Font(font, cjk).TextSize(24).TextColor(engine.Yellow))
+	end.Add(engine.Button(t.again).At(290, 400).Font(font, cjk).TextSize(12).Color(engine.Green)).
 		OnClick(func() {
 			idx = 0
 			show()
 			g.Restart("play")
 		})
-	end.Add(engine.Button(t.menu).At(540, 400).Font(font).TextSize(16)).
+	end.Add(engine.Button(t.menu).At(540, 400).Font(font, cjk).TextSize(12)).
 		OnClick(func() { g.Go("menu") })
 
 	g.Run("menu")

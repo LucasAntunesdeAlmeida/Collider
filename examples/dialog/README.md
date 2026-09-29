@@ -3,13 +3,13 @@
 ![demo](demo.gif)
 
 A short conversation with a typewriter effect. Click to advance; clicking
-mid-line reveals the rest instantly. It speaks the player's language,
-English or Portuguese.
+mid-line reveals the rest instantly. It speaks the player's language:
+English, Portuguese or Chinese.
 
 ```bash
 cd examples/dialog
 go run .
-COLLIDER_LANG=pt-BR go run .   # try the Portuguese text on any system
+COLLIDER_LANG=zh-CN go run .   # try the Chinese text on any system (or pt-BR)
 ```
 
 ## What this example proves
@@ -46,5 +46,22 @@ name := play.Add(engine.Text("").At(300, 425).
   Agents and tests always get `""`, so they play in English on every
   machine; `COLLIDER_LANG` overrides it to try a translation. The
   typewriter counts letters (runes), not bytes, so "ã" never splits.
+- **Fallback fonts** draw what the pixel font lacks. Every text names
+  two fonts: the pixel font draws every glyph it has (Latin with
+  accents, Cyrillic), and the CJK pixel font fills in the Chinese:
+
+  ```go
+  engine.Text(t.title).Font("fonts/pixel.ttf", "fonts/cjk.ttf")
+  ```
+
+  The CJK font is only read the first time a Chinese glyph shows up,
+  so the English and Portuguese runs never load it, and text the pixel
+  font draws alone lays out exactly as it did before. Mixed on one line,
+  both fonts share the baseline. Pixel fonts are sharp at whole
+  multiples of their design size, so the sizes here are multiples of 12
+  (the CJK font's). `fonts/cjk.ttf` is a small subset of
+  [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font)
+  (SIL OFL, `fonts/cjk-OFL.txt`) holding only this example's Chinese
+  glyphs; a real game ships the whole font (`zh_hans`, about 7 MB).
 - `fonts/` joins `sprites/` and `audios/` in the example folder
   convention.

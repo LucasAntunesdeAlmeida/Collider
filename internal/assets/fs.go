@@ -22,6 +22,19 @@ func SetFS(f fs.FS) {
 	fsys = f
 }
 
+// Stat reports whether an asset exists (nil) without reading it.
+func Stat(path string) error {
+	fsMu.Lock()
+	f := fsys
+	fsMu.Unlock()
+	if f != nil {
+		_, err := fs.Stat(f, filepath.ToSlash(path))
+		return err
+	}
+	_, err := os.Stat(path)
+	return err
+}
+
 // ReadFile reads an asset from the configured filesystem, or from disk
 // when none is set. Paths always use forward slashes in fs.FS.
 func ReadFile(path string) ([]byte, error) {

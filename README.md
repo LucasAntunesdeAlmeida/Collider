@@ -37,8 +37,9 @@ claude mcp add mygame -e COLLIDER_AGENT=mcp -- C:\path\to\mygame.exe
   (Claude, Cursor, or a plain script), or on-screen via autopilot; one
   example game is played by its own agent and even records its demo GIF
   itself
-- Scenes, timers, sprite-sheet animations, text with custom TTF fonts,
-  sound and music (wav/ogg)
+- Scenes, timers, sprite-sheet animations, text with custom TTF fonts
+  (with fallback fonts for any script, Chinese included), sound and
+  music (wav/ogg)
 - Fifteen example games across genres, from pong to a dungeon crawler,
   each one a template you can start from
 - Shipping built in: embed assets into a single .exe or build for the
@@ -148,7 +149,7 @@ go run .
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
 | [Caves](examples/caves/) | Exploration | Procedural generation: cellular automata map, BFS-guaranteed winnable |
 | [Runner](examples/runner/) | Endless runner | Sprite sheet animations (run/jump/death), moving-world auto-scroll |
-| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`) |
+| [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect; speaks the player's language (`g.Language`), Chinese included, through a CJK fallback font |
 | [Dungeon](examples/dungeon/) | Dungeon crawler | Multiple screens: ASCII room layouts, edge transitions, key and lock |
 | [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load`; a record kept when the window closes mid-round: `g.OnClose` |
 | [Ship](examples/ship/) | Arcade | Publishing: embedded assets, fullscreen/resizable/icon, exe and browser builds |
@@ -355,7 +356,8 @@ does not exist. That is the point.
 | `.Size(w, h)` | Override the drawn size (also the collider, unless Hitbox is set) |
 | `.Hitbox(w, h)` | Collision box apart from the drawn size, centered: collisions, solids, `Touching`, `Near` and agents' `w`/`h` use it; drawing and clicks keep the drawn bounds |
 | `.Animation(name, strip, frames, fps)` | Define a sprite-sheet animation |
-| `.Font(path)` / `.TextSize(px)` / `.TextColor(c)` | Text styling (custom TTF, size, color) |
+| `.Font(paths...)` | Custom TTF/OTF font. More paths are fallbacks: the first font draws every glyph it has, the next ones fill in the rest (a CJK font behind a Latin pixel font), each loaded the first time a text needs it |
+| `.TextSize(px)` / `.TextColor(c)` | Text styling (size, color) |
 
 ### Object: runtime
 
@@ -437,4 +439,9 @@ does not exist. That is the point.
    every machine. The `COLLIDER_LANG` environment variable (`pt-BR`,
    `zh-CN`; `C` for none) overrides the answer everywhere, agent runs
    included, to try or test a translation.
+11. **A fallback font never moves text it does not draw.** With
+   `.Font(first, fallback)`, text the first font draws entirely
+   measures and draws exactly as with that font alone. Glyphs from a
+   fallback sit on the same baseline, and a line is as tall as the
+   largest ascent plus the largest descent among the fonts it uses.
 

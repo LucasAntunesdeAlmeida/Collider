@@ -97,7 +97,7 @@ func (o *Object) drawButton(screen *ebiten.Image, left, top float64) {
 	vector.FillRect(screen, x, y+h-edge, w, edge, dark, false)
 	vector.FillRect(screen, x+w-edge, y, edge, h, dark, false)
 
-	face := o.fontFace()
+	face := o.textFace()
 	tw, th := text.Measure(o.textStr, face, 0)
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(left+o.w/2-tw/2, top+o.h/2-th/2)
