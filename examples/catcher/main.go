@@ -4,6 +4,8 @@
 //
 // This example proves the save system: g.Load at startup, g.Save at
 // the moment it matters. Values are plain JSON-encodable Go values.
+// Closing the window mid-round (X, Alt+F4) still keeps a new best:
+// g.OnClose saves it before the game ends.
 //
 // Run from this folder: cd examples/catcher && go run .
 package main
@@ -64,6 +66,15 @@ func main() {
 		hud.SetText(fmt.Sprintf("GEMS %d   TIME %02.0f", score, left))
 	}
 	updateHUD()
+
+	// Closing the window mid-round would lose a record in the making:
+	// OnClose runs once, on the game loop, before the game ends.
+	g.OnClose(func() {
+		if score > state.Best { // score is 0 outside a round
+			state.Best = score
+			g.Save("save", state)
+		}
+	})
 
 	// --- End screen ---
 	over := g.Scene("over")

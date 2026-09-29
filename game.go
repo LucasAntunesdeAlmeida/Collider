@@ -22,6 +22,7 @@ type Game struct {
 	current *Scene
 	next    *Scene
 	quit    bool
+	onClose func() // OnClose: runs once when the window is asked to close
 
 	// overlay runs on top of current, which is frozen underneath (see
 	// Overlay). Opening and closing are deferred like scene switches:
@@ -341,7 +342,7 @@ type runner struct {
 
 func (r *runner) Update() error {
 	g := r.g
-	if g.quit {
+	if g.quit || g.closeRequested() {
 		return ebiten.Termination
 	}
 	if g.pilot != nil && g.current != nil {

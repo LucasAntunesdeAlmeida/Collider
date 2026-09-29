@@ -53,6 +53,21 @@ Design points worth copying:
   lack keep the values they had before `Load`. That is versioning for
   free.
 - **First run is not an error**: `Load` just returns false.
+- **Save when the window closes, too**: a player who closes the window
+  mid-round (X, Alt+F4) would lose a record in the making. `g.OnClose`
+  runs once, on the game loop, before the game ends:
+
+  ```go
+  g.OnClose(func() {
+      if score > state.Best { // score is 0 outside a round
+          state.Best = score
+          g.Save("save", state)
+      }
+  })
+  ```
+
+  It never runs for `g.Quit()` (the game's own decision), headless, or
+  in a browser, where the tab closes the page: there, save as you go.
 
 To reset progress, delete the `Catcher` folder in your config
 directory (or clear the site data in the browser).

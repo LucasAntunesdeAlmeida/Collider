@@ -150,7 +150,7 @@ go run .
 | [Runner](examples/runner/) | Endless runner | Sprite sheet animations (run/jump/death), moving-world auto-scroll |
 | [Dialog](examples/dialog/) | Visual novel | Custom TTF fonts, text size and color, typewriter effect |
 | [Dungeon](examples/dungeon/) | Dungeon crawler | Multiple screens: ASCII room layouts, edge transitions, key and lock |
-| [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load` |
+| [Catcher](examples/catcher/) | Arcade | Save data that persists on desktop and in the browser: `g.Save` / `g.Load`; a record kept when the window closes mid-round: `g.OnClose` |
 | [Ship](examples/ship/) | Arcade | Publishing: embedded assets, fullscreen/resizable/icon, exe and browser builds |
 | [Gem Rush](examples/agent/) | Arcade | Agents only: no human input; played by its own pilot, headless bots, or MCP agents |
 
@@ -312,6 +312,7 @@ does not exist. That is the point.
 | `g.Load(key, &v) bool` | Read it back; false (v untouched) when missing or undecodable |
 | `g.Quit()` | End the game after this frame: the window closes and `Run` returns (does nothing in a browser; headless, the run ends) |
 | `g.CanQuit() bool` | Can Quit end the game here? False in a browser, where a page cannot close its tab: hide the QUIT entry |
+| `g.OnClose(fn)` | Run fn once when the player closes the window (X, Alt+F4, a launcher's exit), then end the game like Quit: save or bank progress there. Never runs headless, in a browser, or on Quit |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
 | `g.Headless(scene)` / `g.Step(action)` / `g.Observe()` | Agent play, headless and deterministic |
 | `g.Controls(map[string]Key)` | Name your inputs so agents can discover them |
@@ -415,7 +416,10 @@ does not exist. That is the point.
    close its tab, so `Quit` does nothing there and `g.CanQuit()` is
    false. Headless, the run ends instead: every later `Step` advances
    nothing and returns the final observation with `quit: true`, until
-   `Headless` (or the MCP `reset` tool) starts a new run.
+   `Headless` (or the MCP `reset` tool) starts a new run. Closing the
+   window runs the `g.OnClose` handler once (if the game set one)
+   between two frames, then ends the game the same way; no frame runs
+   after it.
 9. **Audio never gets in the way.** Agent and test runs (`Headless`,
    `Autopilot`, `COLLIDER_AGENT=mcp`, `go test`) are silent: `Sound`
    and `Music` do no audio work and the sound device is never opened.
