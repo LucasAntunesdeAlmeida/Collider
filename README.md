@@ -142,7 +142,7 @@ go run .
 | [Pong](examples/pong/) | Arcade / versus | Built-in velocity, solid bounce, score text |
 | [Jumper](examples/jumper/) | Platformer | Gravity, solid ground, `Grounded()`, pickups |
 | [Zombie Night](examples/zombie-night/) | Top-down shooter | Runtime spawning, tags, scene collision rules, timers |
-| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key; full gamepad play with pad prompts |
+| [Horde](examples/horde/) | Survivor | A world bigger than the window: camera follow, screen-fixed HUD, draw layers; drawing effects (flip, rotate, tint, flash, fade); area queries (auto-aim, contact damage); hitboxes smaller than the sprites; an overlay pause menu with number-key shortcuts (keys by name); a drag joystick and pause on focus loss; a mute key; full gamepad play with pad prompts; a QUIT entry where quitting is possible |
 | [Breakout](examples/breakout/) | Brick breaker | Grid spawning, win conditions, mouse control, menus |
 | [Memory](examples/memory/) | Point-and-click puzzle | A game with zero movement, pure click events |
 | [Arena](examples/arena/) | Survival | Extending the engine: your own types embedding `Object` with custom methods |
@@ -179,7 +179,8 @@ Positions are world coordinates; objects pinned to the screen with
 one, so agents dodge exactly what can hit them.
 While an overlay is open (a pause menu), `"overlay"` names it: it takes
 all input, and `objects` lists the frozen scene's objects, then the
-overlay's.
+overlay's. Once the game calls `Quit` (its QUIT entry), `"quit": true`
+marks the run as over.
 
 Three optional calls make any game, however complex, fully
 agent-playable and self-describing:
@@ -302,7 +303,8 @@ does not exist. That is the point.
 | `g.Volume(v)` | Master volume 0..1 (0 mutes) for the playing music and every sound started after |
 | `g.Save(key, v) error` | Persist a JSON-encodable value (file on desktop, localStorage in the browser, memory for agents and tests) |
 | `g.Load(key, &v) bool` | Read it back; false (v untouched) when missing or undecodable |
-| `g.Quit()` | Exit |
+| `g.Quit()` | End the game after this frame: the window closes and `Run` returns (does nothing in a browser; headless, the run ends) |
+| `g.CanQuit() bool` | Can Quit end the game here? False in a browser, where a page cannot close its tab: hide the QUIT entry |
 | `g.Fullscreen(on)` / `g.Resizable(on)` / `g.Icon(path)` | Window polish |
 | `g.Headless(scene)` / `g.Step(action)` / `g.Observe()` | Agent play, headless and deterministic |
 | `g.Controls(map[string]Key)` | Name your inputs so agents can discover them |
@@ -400,4 +402,11 @@ does not exist. That is the point.
    the scene under it still draws but does not advance at all. Opening
    and closing apply at the start of the next frame, like `g.Go`, and
    `Go`/`Restart` close any overlay.
+8. **`Quit` ends the game after the frame.** The frame that calls
+   `g.Quit()` finishes (its updates, deferred destroys and draw), then
+   the window closes and `Run` returns. In a browser a page cannot
+   close its tab, so `Quit` does nothing there and `g.CanQuit()` is
+   false. Headless, the run ends instead: every later `Step` advances
+   nothing and returns the final observation with `quit: true`, until
+   `Headless` (or the MCP `reset` tool) starts a new run.
 

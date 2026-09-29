@@ -75,7 +75,9 @@ Decorative scenery is filtered out for you. Positions are world
 coordinates; HUD objects pinned to the screen report screen coordinates
 and carry `"fixed": true`. While an overlay (a pause menu) is open,
 `"overlay"` names it: it takes all input, and the scene under it is
-frozen; its objects are listed first, then the overlay's.
+frozen; its objects are listed first, then the overlay's. If the game
+quits itself (you picked its QUIT entry), `"quit": true` appears and
+acting advances nothing until you `reset` a scene.
 
 **Over MCP** (any client, or you via a subprocess): run a game with the
 `COLLIDER_AGENT=mcp` env var and its stdio becomes an MCP server with
@@ -102,7 +104,8 @@ initialize instructions.
   downward, like the screen). The game sees a pad connected from the
   first act that uses one. Returns the resulting observation; unknown
   key or pad button names return an error naming the valid ones.
-- `reset` restarts a scene by name.
+- `reset` restarts a scene by name (and starts a new run after a
+  quit).
 
 The protocol is newline-delimited JSON-RPC 2.0 (`initialize`,
 `tools/list`, `tools/call`), so a plain subprocess pipe works when no

@@ -11,7 +11,9 @@ health; when the bar runs out, the horde wins. Esc or P pauses (then
 1 resumes, 2 gives up), and so does switching to another window. No
 keyboard? Press anywhere and
 drag to steer. M mutes. A gamepad plays it all: the left stick or the
-d-pad walks, Start pauses, A resumes and B gives up.
+d-pad walks, Start pauses, A resumes and B gives up. The pause menu's
+QUIT (3, or Y on a pad) closes the game; the browser build has no QUIT,
+since a web page cannot close its tab.
 
 ```bash
 cd examples/horde
@@ -284,3 +286,23 @@ pausePressed := edge(func() bool {
 - Agents play with a pad too: an `Action` with `Pad` buttons and
   `StickX`/`StickY`, or the MCP act tool's `pad`, `stickX`, `stickY`.
   Their pad connects with the first action that uses it.
+
+## Quit: a way out, where there is one
+
+```go
+if g.CanQuit() { // false in a browser: a page cannot close its tab
+	quitBtn := pause.Add(engine.Button("3 QUIT").At(400, 470))
+	quitBtn.OnClick(g.Quit)
+}
+```
+
+- `g.Quit()` ends the game after the current frame: that frame still
+  finishes and draws, then the window closes and `Run` returns (and a
+  `COLLIDER_RECORD` GIF is saved). The pause menu's QUIT entry, the 3
+  key or Y on a pad call it.
+- `g.CanQuit()` is false in a browser, where `Quit` does nothing: a
+  page cannot close its own tab, and stopping the loop would only
+  freeze the canvas. The web build of Horde simply has no QUIT entry,
+  and a desktop build (Steam) has one.
+- Agents see it too: headless, a quit game marks its observation with
+  `"quit": true` and stops advancing, until `reset` starts a new run.

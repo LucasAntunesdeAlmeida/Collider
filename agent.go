@@ -46,6 +46,9 @@ type Observation struct {
 	Overlay string      `json:"overlay,omitempty"`
 	Objects []ObjectObs `json:"objects"`
 	State   any         `json:"state,omitempty"`
+	// Quit is set once the game has called Quit (a QUIT menu entry):
+	// the run is over, and further steps advance nothing.
+	Quit bool `json:"quit,omitempty"`
 }
 
 // ObjectObs describes one live object. Tag is the game's own label
@@ -118,6 +121,7 @@ func (g *Game) Headless(scene string) {
 		panic("collider: agent play is disallowed by this game")
 	}
 	g.headless = true
+	g.quit = false // a new run
 	g.agentIn = &agentInput{keys: map[Key]bool{}}
 	g.input = g.agentIn
 	g.Go(scene)
@@ -151,9 +155,14 @@ func (g *Game) injectAction(a Action) {
 
 // Step advances exactly one frame with the given input and returns the
 // resulting observation. Deterministic: same actions, same results.
+// Once the game has called Quit, Step advances nothing and returns the
+// final observation, with Quit set.
 func (g *Game) Step(a Action) Observation {
 	if !g.headless {
 		panic("collider: call Headless before Step")
+	}
+	if g.quit {
+		return g.Observe()
 	}
 	g.injectAction(a)
 	g.advance(1.0 / 60.0)
@@ -164,7 +173,7 @@ func (g *Game) Step(a Action) Observation {
 // Observe returns the structured state of the current frame without
 // advancing it.
 func (g *Game) Observe() Observation {
-	obs := Observation{}
+	obs := Observation{Quit: g.quit}
 	if g.current == nil {
 		return obs
 	}
@@ -306,6 +315,7 @@ func (g *Game) serveMCP() {
 	if g.stateFn != nil {
 		obsHelp += " The \"state\" field carries game-specific state."
 	}
+	obsHelp += " \"quit\": true means the game quit itself (a QUIT menu entry): acting advances nothing until reset."
 
 	mcps.Serve(g.title, g.agentDocs, []mcps.Tool{
 		{
@@ -343,13 +353,14 @@ func (g *Game) serveMCP() {
 		},
 		{
 			Name:        "reset",
-			Description: "Restart a scene to its initial state and switch to it.",
+			Description: "Restart a scene to its initial state and switch to it (also after the game quit).",
 			Schema:      `{"type":"object","properties":{"scene":{"type":"string"}},"required":["scene"]}`,
 			Call: func(args map[string]any) (string, error) {
 				scene, _ := args["scene"].(string)
 				if windowed {
 					return send(agentCmd{reset: scene, observe: true, frames: 1}), nil
 				}
+				g.quit = false // reset starts a new run, even after a quit
 				g.Restart(scene)
 				g.advance(0)
 				return obsJSON(), nil

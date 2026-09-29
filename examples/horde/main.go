@@ -24,7 +24,9 @@
 // mutes and unmutes everything with Volume. A gamepad plays it all: the
 // left stick (PadAxis) or the d-pad (PadDown) walks, Start pauses, A
 // and B pick the pause entries, and the menus show pad prompts while a
-// pad is connected (PadConnected).
+// pad is connected (PadConnected). The pause menu's QUIT (3, or Y)
+// ends the game with Quit; in a browser, where a page cannot close its
+// tab, CanQuit is false and the entry is not there.
 //
 // Run from this folder: cd examples/horde && go run .
 package main
@@ -243,6 +245,7 @@ func main() {
 	mutePressed := edge(func() bool { return g.Key(engine.M) })
 	padA := edge(func() bool { return g.PadDown(engine.PadA) })
 	padB := edge(func() bool { return g.PadDown(engine.PadB) })
+	padY := edge(func() bool { return g.PadDown(engine.PadY) })
 
 	// prompt keeps a button's label in step with the controller in use:
 	// the pad's button while a pad is connected, the key otherwise.
@@ -338,28 +341,41 @@ func main() {
 	// no chaser moves, no timer ticks, until it closes. ---
 	pause := g.Scene("pause")
 	pause.Add(engine.Rect(800, 600, engine.Black).At(400, 300).Alpha(0.6).Fixed())
-	pause.Add(engine.Text("PAUSED").At(400, 200).Font(font).TextSize(32))
-	resumeBtn := pause.Add(engine.Button("1 RESUME").At(400, 320).Font(font).TextSize(18).Color(engine.Green))
+	pause.Add(engine.Text("PAUSED").At(400, 170).Font(font).TextSize(32))
+	resumeBtn := pause.Add(engine.Button("1 RESUME").At(400, 290).Font(font).TextSize(18).Color(engine.Green))
 	resumeBtn.OnClick(g.CloseOverlay)
-	giveUpBtn := pause.Add(engine.Button("2 GIVE UP").At(400, 410).Font(font).TextSize(18).Color(engine.Red))
+	giveUpBtn := pause.Add(engine.Button("2 GIVE UP").At(400, 380).Font(font).TextSize(18).Color(engine.Red))
 	giveUpBtn.OnClick(lose) // Go closes the overlay too
+	// QUIT closes the game after this frame, where a game can close: a
+	// browser tab cannot be closed by its page, so there (CanQuit is
+	// false) the entry is left out.
+	quitPrompt := func() {}
+	if g.CanQuit() {
+		quitBtn := pause.Add(engine.Button("3 QUIT").At(400, 470).Font(font).TextSize(18))
+		quitBtn.OnClick(g.Quit)
+		quitPrompt = prompt(quitBtn, "3 QUIT", "Y QUIT")
+	}
 	// The number keys pick the entries too. The number row has no
 	// constant; KeyNamed reaches any key by name, once, at setup. On a
-	// gamepad, A resumes and B gives up, and the labels say so.
-	resumeKey, giveUpKey := engine.KeyNamed("1"), engine.KeyNamed("2")
+	// gamepad, A resumes, B gives up and Y quits, and the labels say so.
+	resumeKey, giveUpKey, quitKey := engine.KeyNamed("1"), engine.KeyNamed("2"), engine.KeyNamed("3")
 	resumePrompt := prompt(resumeBtn, "1 RESUME", "A RESUME")
 	giveUpPrompt := prompt(giveUpBtn, "2 GIVE UP", "B GIVE UP")
 	pause.OnUpdate(func(float64) {
 		muteKey()
 		resumePrompt()
 		giveUpPrompt()
-		// Read both edges every frame so neither goes stale.
-		resume, giveUp := padA(), padB()
+		quitPrompt()
+		// Read every edge every frame so none goes stale.
+		resume, giveUp, quit := padA(), padB(), padY()
 		if pausePressed() || g.Key(resumeKey) || resume {
 			g.CloseOverlay()
 		}
 		if g.Key(giveUpKey) || giveUp {
 			lose()
+		}
+		if g.Key(quitKey) || quit {
+			g.Quit() // does nothing in a browser
 		}
 	})
 

@@ -3,6 +3,7 @@ package collider
 import (
 	"image"
 	"os"
+	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -149,9 +150,32 @@ func (g *Game) Volume(v float64) {
 	}
 }
 
-// Quit closes the window and returns from Run.
+// quitSupported is false where a game cannot end itself: in a browser,
+// a page cannot close its tab, and a stopped game loop would only
+// leave a frozen canvas. A variable so tests can stand in for the web.
+var quitSupported = runtime.GOOS != "js"
+
+// Quit ends the game after the current frame: the frame finishes (its
+// updates, deferred destroys and draw), then the window closes and Run
+// returns, saving the COLLIDER_RECORD GIF on the way. Callable any
+// time, from any callback, as often as you like.
+//
+// In a browser Quit does nothing, since a page cannot close its tab;
+// CanQuit reports it, so a game can hide its QUIT entry there.
+// Headless, the run ends instead: every later Step advances nothing
+// and returns the final observation, marked Quit; Headless starts a
+// new run.
 func (g *Game) Quit() {
-	g.quit = true
+	if g.CanQuit() {
+		g.quit = true
+	}
+}
+
+// CanQuit reports whether Quit can end the game here: true on desktop
+// and in headless play, false in a browser. Show a QUIT menu entry only
+// when it is true.
+func (g *Game) CanQuit() bool {
+	return quitSupported || g.headless
 }
 
 // Fullscreen switches fullscreen on or off. Callable any time,
