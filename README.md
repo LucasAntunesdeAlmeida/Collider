@@ -433,9 +433,9 @@ does not exist. That is the point.
    These are the same runs whose saves stay in memory. A
    `COLLIDER_AGENT=mcp-window` session is a real window a person
    watches and plays along with, so it has sound. A machine with no
-   working audio device (a Linux box or container without ALSA,
-   PulseAudio or PipeWire) plays silently after one log line, instead
-   of failing to start.
+   working audio device (a Linux box or container with no PulseAudio
+   or PipeWire server and no ALSA device) plays silently after one
+   log line, instead of failing to start.
 10. **Agents and tests get the default language.** `g.Language()` is
    `""` in the same agent and test runs (Headless and Autopilot once
    called, `COLLIDER_AGENT=mcp`, `go test`), so a translated game

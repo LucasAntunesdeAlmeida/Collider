@@ -68,13 +68,20 @@ Your game is now a link.
 
 ## Linux
 
-Ebitengine needs cgo on Linux, so build there (a VM, WSL or a
-container such as Valve's Steam Runtime SDK) with `gcc`, `pkg-config`
-and the ALSA and X11 development packages (`libasound2-dev`,
-`libgl1-mesa-dev`, `libx11-dev`, `libxcursor-dev`, `libxi-dev`,
-`libxinerama-dev`, `libxrandr-dev`, `libxxf86vm-dev`). A player whose
-machine has no working audio device still gets the game: it plays
-silently and logs one line saying why.
+No cgo, no C compiler, no development packages: Linux builds
+cross-compile from any machine, Windows included.
+
+```bash
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o mygame .
+```
+
+The binary links only glibc and opens the rest when it starts, all
+standard on a Linux desktop and in Valve's Steam Runtime: `libX11`
+and its extensions (`libXrandr`, `libXcursor`, `libXi`,
+`libXinerama`, `libXext`, `libXrender`), `libGL` (or `libEGL`), and
+for sound a PulseAudio or PipeWire server (spoken to directly), else
+`libasound`. A player whose machine has no working audio device
+still gets the game: it plays silently and logs one line saying why.
 
 ## Third-party license notices
 

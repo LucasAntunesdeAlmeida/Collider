@@ -15,9 +15,9 @@ jobs:
         with:
           go-version: stable
 
-      # Ebitengine needs the dev libraries to compile on Linux, and xvfb
-      # to provide a virtual display for the tests (GLFW refuses to
-      # initialize without one, even headless).
+      # Ebitengine opens X11, OpenGL and ALSA at run time (these packages
+      # bring the libraries), and xvfb provides a virtual display for the
+      # tests (GLFW refuses to initialize without one, even headless).
       - name: Install Ebitengine build dependencies
         run: |
           sudo apt-get update
@@ -39,6 +39,11 @@ jobs:
       # cgo there, so they cross-compile from here.
       - name: Vet and build for Windows
         run: GOOS=windows go vet . && GOOS=windows go build ./...
+
+      # Ebitengine and the engine need no cgo on Linux either, so a
+      # Linux game builds with Go alone.
+      - name: Vet and build for Linux without cgo
+        run: CGO_ENABLED=0 GOOS=linux go vet . && CGO_ENABLED=0 GOOS=linux go build ./...
 
       - name: Staticcheck
         run: |

@@ -1,77 +1,180 @@
-//go:build cgo && !android && !darwin && !js && !windows && !nintendosdk && !playstation5
+//go:build ((linux && !android) || freebsd || netbsd) && !nintendosdk && !playstation5
 
 package assets
 
-// This is where Ebitengine's audio driver (oto) plays through ALSA. It
-// opens the device in the background and a failure (no sound card, no
-// PulseAudio or PipeWire, as in a bare container) would end the game
-// loop, so the engine tries the same devices oto does first, the same
-// way: the first one that opens must take oto's format.
+// oto's ALSA fallback, probed the way oto opens it: libasound loaded at
+// run time (purego, no cgo), the same device candidates in the same
+// order, and the first that opens must take oto's format.
 
-// #cgo pkg-config: alsa
-//
-// #include <alsa/asoundlib.h>
-// #include <errno.h>
-// #include <stdlib.h>
-// #include <string.h>
-//
-// // ALSA prints every failed attempt to stderr; the engine logs one line.
-// static void colliderQuiet(const char *file, int line, const char *fn, int err, const char *fmt, ...) {}
-//
-// // Returns the open error (< 0) when name cannot be opened, else 0 with
-// // *format set to the result of configuring it the way oto will.
-// static int colliderTry(const char *name, unsigned int rate, int *format) {
-// 	snd_pcm_t *pcm;
-// 	int err = snd_pcm_open(&pcm, name, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-// 	if (err == -EBUSY) {
-// 		*format = 0; // there, just in use: oto waits for it
-// 		return 0;
-// 	}
-// 	if (err < 0) {
-// 		return err;
-// 	}
-// 	*format = snd_pcm_set_params(pcm, SND_PCM_FORMAT_FLOAT_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, rate, 1, 100000);
-// 	snd_pcm_close(pcm);
-// 	return 0;
-// }
-//
-// // oto's candidates, in its order: default, plug:default, then every
-// // output device ALSA lists except null.
-// static int colliderProbe(unsigned int rate, int *format) {
-// 	snd_lib_error_set_handler(colliderQuiet);
-// 	int err = colliderTry("default", rate, format);
-// 	if (err < 0) {
-// 		err = colliderTry("plug:default", rate, format);
-// 	}
-// 	void **hints;
-// 	if (err < 0 && snd_device_name_hint(-1, "pcm", &hints) == 0) {
-// 		for (void **it = hints; *it != NULL && err < 0; it++) {
-// 			char *io = snd_device_name_get_hint(*it, "IOID");
-// 			char *name = snd_device_name_get_hint(*it, "NAME");
-// 			if (name != NULL && (io == NULL || strcmp(io, "Input") != 0) &&
-// 				strcmp(name, "null") != 0 && strcmp(name, "default") != 0) {
-// 				err = colliderTry(name, rate, format);
-// 			}
-// 			free(io);
-// 			free(name);
-// 		}
-// 		snd_device_name_free_hint(hints);
-// 	}
-// 	snd_lib_error_set_handler(NULL);
-// 	return err;
-// }
-import "C"
+import (
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"unsafe"
 
-import "fmt"
+	"github.com/ebitengine/purego"
+	"golang.org/x/sys/unix"
+)
 
-// probeDevice reports why audio cannot play here, or nil when it can.
-func probeDevice(sampleRate int) error {
-	var format C.int
-	if err := C.colliderProbe(C.uint(sampleRate), &format); err < 0 {
-		return fmt.Errorf("ALSA cannot open a playback device: %s", C.GoString(C.snd_strerror(err)))
+func init() { probeALSA = probeALSADevices }
+
+const (
+	sndPCMStreamPlayback = 0
+	sndPCMNonblock       = 1
+	sndPCMFormatFloatLE  = 14
+	sndPCMAccessRWInter  = 3
+	sndLatencyMicros     = 100000
+)
+
+var (
+	alsaOnce sync.Once
+	alsaErr  error
+
+	sndStrerror          func(errnum int32) string
+	sndPCMOpen           func(pcm *uintptr, name string, stream, mode int32) int32
+	sndPCMSetParams      func(pcm uintptr, format, access int32, channels, rate uint32, resample int32, latency uint32) int32
+	sndPCMClose          func(pcm uintptr) int32
+	sndDeviceNameHint    func(card int32, iface string, hints *unsafe.Pointer) int32
+	sndDeviceNameGetHint func(hint unsafe.Pointer, id string) unsafe.Pointer
+	sndDeviceNameFree    func(hints unsafe.Pointer) int32
+	libcFree             func(p unsafe.Pointer)
+)
+
+// loadALSA opens libasound the way oto does. A machine without it has
+// no ALSA device, which is an answer, not a crash.
+func loadALSA() error {
+	alsaOnce.Do(func() {
+		var h uintptr
+		for _, name := range []string{"libasound.so.2", "libasound.so"} {
+			if h, alsaErr = purego.Dlopen(name, purego.RTLD_LAZY|purego.RTLD_GLOBAL); alsaErr == nil {
+				break
+			}
+		}
+		if alsaErr != nil {
+			alsaErr = fmt.Errorf("cannot load libasound: %v", alsaErr)
+			return
+		}
+		purego.RegisterLibFunc(&sndStrerror, h, "snd_strerror")
+		purego.RegisterLibFunc(&sndPCMOpen, h, "snd_pcm_open")
+		purego.RegisterLibFunc(&sndPCMSetParams, h, "snd_pcm_set_params")
+		purego.RegisterLibFunc(&sndPCMClose, h, "snd_pcm_close")
+		purego.RegisterLibFunc(&sndDeviceNameHint, h, "snd_device_name_hint")
+		purego.RegisterLibFunc(&sndDeviceNameGetHint, h, "snd_device_name_get_hint")
+		purego.RegisterLibFunc(&sndDeviceNameFree, h, "snd_device_name_free_hint")
+		// libc's free, for the hint strings: libasound links libc, so
+		// its handle resolves it.
+		purego.RegisterLibFunc(&libcFree, h, "free")
+	})
+	return alsaErr
+}
+
+// probeALSADevices tries oto's candidates until one opens and takes
+// the format (a device that is merely busy counts: oto waits for it).
+// ALSA and its plugins (JACK, OSS...) print every failed attempt to
+// stderr; the engine logs one line instead, so stderr is muted while
+// it looks.
+func probeALSADevices(sampleRate int) error {
+	if err := loadALSA(); err != nil {
+		return err
 	}
-	if format < 0 {
-		return fmt.Errorf("ALSA playback device cannot be configured: %s", C.GoString(C.snd_strerror(format)))
+	defer quietStderr()()
+	names := alsaCandidates(alsaHints())
+	var first error
+	for _, name := range names {
+		var pcm uintptr
+		if e := sndPCMOpen(&pcm, name, sndPCMStreamPlayback, sndPCMNonblock); e == -int32(unix.EBUSY) {
+			return nil
+		} else if e < 0 {
+			if first == nil {
+				first = fmt.Errorf("%q: %s", name, sndStrerror(e))
+			}
+			continue
+		}
+		e := sndPCMSetParams(pcm, sndPCMFormatFloatLE, sndPCMAccessRWInter, 2, uint32(sampleRate), 1, sndLatencyMicros)
+		sndPCMClose(pcm)
+		if e >= 0 {
+			return nil
+		}
+		if first == nil {
+			first = fmt.Errorf("%q cannot be configured: %s", name, sndStrerror(e))
+		}
 	}
-	return nil
+	return fmt.Errorf("no playback device among %d (%v)", len(names), first)
+}
+
+// alsaHint is one PCM device ALSA lists: its name and direction
+// ("Input", "Output", or "" for both).
+type alsaHint struct{ name, ioid string }
+
+// alsaHints lists ALSA's PCM devices, nil when it cannot.
+func alsaHints() []alsaHint {
+	var hints unsafe.Pointer
+	if sndDeviceNameHint(-1, "pcm", &hints) != 0 {
+		return nil
+	}
+	defer sndDeviceNameFree(hints)
+	var out []alsaHint
+	for p := hints; ; p = unsafe.Add(p, unsafe.Sizeof(uintptr(0))) {
+		h := *(*unsafe.Pointer)(p)
+		if h == nil {
+			return out
+		}
+		out = append(out, alsaHint{name: hintString(h, "NAME"), ioid: hintString(h, "IOID")})
+	}
+}
+
+// hintString is a hint's value, freeing the C string ALSA made.
+func hintString(hint unsafe.Pointer, id string) string {
+	p := sndDeviceNameGetHint(hint, id)
+	if p == nil {
+		return ""
+	}
+	defer libcFree(p)
+	return unix.BytePtrToString((*byte)(p))
+}
+
+// alsaCandidates is oto's device order: default, plug:default, then
+// every listed device that can play except null (and default again),
+// each followed by its plug: variant, which converts the float samples
+// to what the device takes.
+func alsaCandidates(hints []alsaHint) []string {
+	names := []string{"default", "plug:default"}
+	for _, h := range hints {
+		if h.ioid == "Input" {
+			continue
+		}
+		switch h.name {
+		case "", "null", "default":
+			continue
+		}
+		names = append(names, h.name)
+		if !strings.HasPrefix(h.name, "plug:") && !strings.HasPrefix(h.name, "plughw:") {
+			names = append(names, "plug:"+h.name)
+		}
+	}
+	return names
+}
+
+// quietStderr points file descriptor 2 at the null device until the
+// returned function puts it back. Best effort: when it cannot, stderr
+// stays as it was.
+func quietStderr() (restore func()) {
+	null, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	if err != nil {
+		return func() {}
+	}
+	defer null.Close()
+	saved, err := unix.Dup(2)
+	if err != nil {
+		return func() {}
+	}
+	if err := unix.Dup2(int(null.Fd()), 2); err != nil {
+		unix.Close(saved)
+		return func() {}
+	}
+	return func() {
+		unix.Dup2(saved, 2)
+		unix.Close(saved)
+	}
 }
